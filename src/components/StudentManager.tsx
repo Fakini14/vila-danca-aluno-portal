@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Edit, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { CreateStudentModal } from '@/components/forms/CreateStudentModal';
 
 interface Student {
   id: string;
@@ -30,6 +31,7 @@ export function StudentManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,7 +106,10 @@ export function StudentManager() {
             Gerencie os alunos cadastrados no sistema
           </p>
         </div>
-        <Button className="dance-gradient">
+        <Button 
+          className="dance-gradient"
+          onClick={() => setCreateModalOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Novo Aluno
         </Button>
@@ -213,6 +218,12 @@ export function StudentManager() {
           </div>
         </CardContent>
       </Card>
+
+      <CreateStudentModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={fetchStudents}
+      />
     </div>
   );
 }

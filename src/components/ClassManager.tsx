@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Calendar, Clock, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { CreateClassModal } from '@/components/forms/CreateClassModal';
 
 interface Class {
   id: string;
@@ -29,6 +30,7 @@ export function ClassManager() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -97,7 +99,10 @@ export function ClassManager() {
             Gerencie as turmas e aulas do sistema
           </p>
         </div>
-        <Button className="dance-gradient">
+        <Button 
+          className="dance-gradient"
+          onClick={() => setCreateModalOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Nova Turma
         </Button>
@@ -264,6 +269,12 @@ export function ClassManager() {
           </div>
         </CardContent>
       </Card>
+
+      <CreateClassModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={fetchClasses}
+      />
     </div>
   );
 }

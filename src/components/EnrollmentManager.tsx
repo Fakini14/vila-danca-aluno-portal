@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Calendar, User } from 'lucide-react';
+import { CreateEnrollmentModal } from '@/components/forms/CreateEnrollmentModal';
 
 interface Enrollment {
   id: string;
@@ -30,6 +31,7 @@ export function EnrollmentManager() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,7 +103,10 @@ export function EnrollmentManager() {
             Gerencie as matrículas dos alunos nas turmas
           </p>
         </div>
-        <Button className="dance-gradient">
+        <Button 
+          className="dance-gradient"
+          onClick={() => setCreateModalOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Nova Matrícula
         </Button>
@@ -187,6 +192,12 @@ export function EnrollmentManager() {
           </div>
         </CardContent>
       </Card>
+
+      <CreateEnrollmentModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={fetchEnrollments}
+      />
     </div>
   );
 }

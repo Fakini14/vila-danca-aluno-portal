@@ -160,6 +160,9 @@ export type Database = {
           cpf: string
           created_at: string
           email: string
+          email_confirmation_sent_at: string | null
+          email_confirmation_token: string | null
+          email_confirmed: boolean | null
           id: string
           nome_completo: string
           role: Database["public"]["Enums"]["user_role"]
@@ -171,6 +174,9 @@ export type Database = {
           cpf: string
           created_at?: string
           email: string
+          email_confirmation_sent_at?: string | null
+          email_confirmation_token?: string | null
+          email_confirmed?: boolean | null
           id: string
           nome_completo: string
           role?: Database["public"]["Enums"]["user_role"]
@@ -182,6 +188,9 @@ export type Database = {
           cpf?: string
           created_at?: string
           email?: string
+          email_confirmation_sent_at?: string | null
+          email_confirmation_token?: string | null
+          email_confirmed?: boolean | null
           id?: string
           nome_completo?: string
           role?: Database["public"]["Enums"]["user_role"]

@@ -8,6 +8,7 @@ import { Users, GraduationCap, Calendar, UserPlus } from 'lucide-react';
 import { ClassManager } from '@/components/ClassManager';
 import { StudentManager } from '@/components/StudentManager';
 import { EnrollmentManager } from '@/components/EnrollmentManager';
+import { StaffManager } from '@/components/StaffManager';
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -34,11 +35,12 @@ export function AdminDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="students" disabled={!canManageUsers}>Alunos</TabsTrigger>
           <TabsTrigger value="classes" disabled={!canManageClasses}>Turmas</TabsTrigger>
           <TabsTrigger value="enrollments" disabled={!canManageUsers}>Matrículas</TabsTrigger>
+          <TabsTrigger value="staff" disabled={profile?.role !== 'admin'}>Equipe</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
@@ -114,6 +116,10 @@ export function AdminDashboard() {
 
         <TabsContent value="enrollments" className="mt-6">
           <EnrollmentManager />
+        </TabsContent>
+
+        <TabsContent value="staff" className="mt-6">
+          <StaffManager />
         </TabsContent>
       </Tabs>
     </div>
