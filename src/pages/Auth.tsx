@@ -15,7 +15,7 @@ export default function Auth() {
 
   // Redirect if already authenticated
   if (user && !loading) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (loading) {
@@ -49,7 +49,7 @@ export default function Auth() {
       nome_completo: formData.get('nome_completo') as string,
       cpf: formData.get('cpf') as string,
       whatsapp: formData.get('whatsapp') as string,
-      role: (formData.get('role') as any) || 'aluno',
+      role: 'aluno' as const, // Sempre aluno para cadastro público
     };
 
     await signUp(userData);
@@ -69,14 +69,14 @@ export default function Auth() {
             Espaço Vila Dança & Arte
           </h1>
           <p className="text-muted-foreground">
-            Entre na sua conta ou cadastre-se
+            Entre na sua conta ou cadastre-se como aluno
           </p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Entrar</TabsTrigger>
-            <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+            <TabsTrigger value="signup">Cadastrar como Aluno</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
@@ -125,9 +125,9 @@ export default function Auth() {
           <TabsContent value="signup">
             <Card>
               <CardHeader>
-                <CardTitle>Criar Conta</CardTitle>
+                <CardTitle>Criar Conta como Aluno</CardTitle>
                 <CardDescription>
-                  Cadastre-se para acessar o sistema
+                  Cadastre-se para ter acesso às turmas e seu portal pessoal
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -179,20 +179,6 @@ export default function Auth() {
                       placeholder="••••••••"
                       minLength={6}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-role">Tipo de Usuário</Label>
-                    <Select name="role" defaultValue="aluno">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="aluno">Aluno</SelectItem>
-                        <SelectItem value="professor">Professor</SelectItem>
-                        <SelectItem value="funcionario">Funcionário</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                   <Button 
                     type="submit" 

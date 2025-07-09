@@ -33,15 +33,15 @@ export function AdminDashboard() {
         </Badge>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="students" disabled={!canManageUsers}>Alunos</TabsTrigger>
           <TabsTrigger value="classes" disabled={!canManageClasses}>Turmas</TabsTrigger>
           <TabsTrigger value="enrollments" disabled={!canManageUsers}>Matrículas</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="dance-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -104,15 +104,15 @@ export function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="students">
+        <TabsContent value="students" className="mt-6">
           <StudentManager />
         </TabsContent>
 
-        <TabsContent value="classes">
+        <TabsContent value="classes" className="mt-6">
           <ClassManager />
         </TabsContent>
 
-        <TabsContent value="enrollments">
+        <TabsContent value="enrollments" className="mt-6">
           <EnrollmentManager />
         </TabsContent>
       </Tabs>
