@@ -14,16 +14,267 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      class_teachers: {
+        Row: {
+          class_id: string
+          comissao_percentual: number
+          created_at: string
+          id: string
+          teacher_id: string
+        }
+        Insert: {
+          class_id: string
+          comissao_percentual?: number
+          created_at?: string
+          id?: string
+          teacher_id: string
+        }
+        Update: {
+          class_id?: string
+          comissao_percentual?: number
+          created_at?: string
+          id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_teachers_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_teachers_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      classes: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          data_inicio: string
+          data_termino: string | null
+          dias_semana: string[]
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          modalidade: string
+          nivel: Database["public"]["Enums"]["nivel_turma"]
+          tempo_total_minutos: number
+          tipo: Database["public"]["Enums"]["tipo_turma"]
+          updated_at: string
+          valor_aula: number
+          valor_matricula: number | null
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          data_inicio: string
+          data_termino?: string | null
+          dias_semana: string[]
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          modalidade: string
+          nivel: Database["public"]["Enums"]["nivel_turma"]
+          tempo_total_minutos: number
+          tipo: Database["public"]["Enums"]["tipo_turma"]
+          updated_at?: string
+          valor_aula: number
+          valor_matricula?: number | null
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          data_inicio?: string
+          data_termino?: string | null
+          dias_semana?: string[]
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          modalidade?: string
+          nivel?: Database["public"]["Enums"]["nivel_turma"]
+          tempo_total_minutos?: number
+          tipo?: Database["public"]["Enums"]["tipo_turma"]
+          updated_at?: string
+          valor_aula?: number
+          valor_matricula?: number | null
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          ativa: boolean
+          class_id: string
+          created_at: string
+          data_matricula: string
+          id: string
+          student_id: string
+          updated_at: string
+          valor_pago_matricula: number | null
+        }
+        Insert: {
+          ativa?: boolean
+          class_id: string
+          created_at?: string
+          data_matricula?: string
+          id?: string
+          student_id: string
+          updated_at?: string
+          valor_pago_matricula?: number | null
+        }
+        Update: {
+          ativa?: boolean
+          class_id?: string
+          created_at?: string
+          data_matricula?: string
+          id?: string
+          student_id?: string
+          updated_at?: string
+          valor_pago_matricula?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          cpf: string
+          created_at: string
+          email: string
+          id: string
+          nome_completo: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          email: string
+          id: string
+          nome_completo: string
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+          whatsapp: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          email?: string
+          id?: string
+          nome_completo?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          created_at: string
+          funcao: Database["public"]["Enums"]["user_role"]
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          funcao: Database["public"]["Enums"]["user_role"]
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          funcao?: Database["public"]["Enums"]["user_role"]
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          created_at: string
+          id: string
+          parceiro_id: string | null
+          sexo: Database["public"]["Enums"]["sexo"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          parceiro_id?: string | null
+          sexo: Database["public"]["Enums"]["sexo"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parceiro_id?: string | null
+          sexo?: Database["public"]["Enums"]["sexo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      nivel_turma: "basico" | "intermediario" | "avancado"
+      sexo: "masculino" | "feminino" | "outro"
+      tipo_turma: "regular" | "workshop" | "particular" | "outra"
+      user_role: "admin" | "professor" | "funcionario" | "aluno"
+      user_status: "ativo" | "inativo"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +401,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      nivel_turma: ["basico", "intermediario", "avancado"],
+      sexo: ["masculino", "feminino", "outro"],
+      tipo_turma: ["regular", "workshop", "particular", "outra"],
+      user_role: ["admin", "professor", "funcionario", "aluno"],
+      user_status: ["ativo", "inativo"],
+    },
   },
 } as const
