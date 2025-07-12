@@ -108,7 +108,7 @@ export function CreateStudentModal({ open, onOpenChange, onSuccess }: CreateStud
           .insert({
             id: authData.user.id,
             sexo: values.sexo,
-            parceiro_id: values.parceiro_id || null,
+            parceiro_id: values.parceiro_id === 'none' ? null : values.parceiro_id || null,
           });
 
         if (studentError) throw studentError;
@@ -237,7 +237,7 @@ export function CreateStudentModal({ open, onOpenChange, onSuccess }: CreateStud
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="none">Nenhum</SelectItem>
                       {students.map((student) => (
                         <SelectItem key={student.id} value={student.id}>
                           {student.nome_completo}
