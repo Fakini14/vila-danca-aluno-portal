@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Music } from 'lucide-react';
+import { Loader2, Music, ArrowLeft } from 'lucide-react';
 
 export default function Auth() {
   const { signIn, signUp, user, loading } = useAuth();
@@ -59,6 +59,16 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
+        {/* Back to Home Button */}
+        <div className="mb-6">
+          <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar ao início
+            </Link>
+          </Button>
+        </div>
+
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <div className="p-3 rounded-full bg-primary/10">
