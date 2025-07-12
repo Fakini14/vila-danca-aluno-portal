@@ -20,6 +20,7 @@ interface Student {
   status: 'ativo' | 'inativo';
   sexo: 'masculino' | 'feminino' | 'outro';
   parceiro_id?: string;
+  email_confirmed?: boolean;
   parceiro?: {
     nome_completo: string;
   };
@@ -49,7 +50,8 @@ export function StudentManager() {
             email,
             whatsapp,
             cpf,
-            status
+            status,
+            email_confirmed
           ),
           parceiro:profiles!students_parceiro_id_fkey(
             nome_completo
@@ -67,6 +69,7 @@ export function StudentManager() {
         status: student.profiles?.status || 'ativo',
         sexo: student.sexo,
         parceiro_id: student.parceiro_id,
+        email_confirmed: student.profiles?.email_confirmed,
         parceiro: student.parceiro
       })) || [];
 
@@ -160,6 +163,9 @@ export function StudentManager() {
                     <Badge variant={student.status === 'ativo' ? 'default' : 'secondary'}>
                       {student.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </Badge>
+                    <Badge variant={student.email_confirmed ? 'default' : 'outline'}>
+                      {student.email_confirmed ? 'Email Confirmado' : 'Email Pendente'}
+                    </Badge>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -199,6 +205,12 @@ export function StudentManager() {
                               <Label>Status</Label>
                               <Badge variant={student.status === 'ativo' ? 'default' : 'secondary'}>
                                 {student.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                              </Badge>
+                            </div>
+                            <div>
+                              <Label>Email</Label>
+                              <Badge variant={student.email_confirmed ? 'default' : 'outline'}>
+                                {student.email_confirmed ? 'Confirmado' : 'Pendente'}
                               </Badge>
                             </div>
                           </div>
