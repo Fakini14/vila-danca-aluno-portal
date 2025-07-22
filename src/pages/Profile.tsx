@@ -18,7 +18,7 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     nome_completo: profile?.nome_completo || '',
     whatsapp: profile?.whatsapp || '',
-    email: profile?.email || '',
+    cpf: profile?.cpf || '',
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -28,7 +28,7 @@ export default function Profile() {
     const { error } = await updateProfile({
       nome_completo: formData.nome_completo,
       whatsapp: formData.whatsapp,
-      email: formData.email,
+      cpf: formData.cpf,
     });
 
     if (!error) {
@@ -91,10 +91,13 @@ export default function Profile() {
                 <Input
                   id="email"
                   type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  disabled
+                  value={profile?.email || ''}
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">
+                  O email não pode ser alterado pois é usado para login
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -114,13 +117,11 @@ export default function Profile() {
                 <Input
                   id="cpf"
                   type="text"
-                  disabled
-                  value={profile?.cpf || ''}
-                  className="bg-muted"
+                  required
+                  placeholder="000.000.000-00"
+                  value={formData.cpf}
+                  onChange={(e) => handleInputChange('cpf', e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  O CPF não pode ser alterado
-                </p>
               </div>
 
               <div className="space-y-2">
