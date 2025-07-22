@@ -19,18 +19,10 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUpStudent: (userData: SignUpData) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
 
-interface SignUpData {
-  email: string;
-  password: string;
-  nome_completo: string;
-  cpf: string;
-  whatsapp: string;
-}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -118,47 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUpStudent = async (userData: SignUpData) => {
-    try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            nome_completo: userData.nome_completo,
-            cpf: userData.cpf,
-            whatsapp: userData.whatsapp,
-            role: 'aluno', // Sempre aluno para cadastro público
-          }
-        }
-      });
-
-      if (error) {
-        toast({
-          title: "Erro no cadastro",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Cadastro realizado",
-          description: "Verifique seu email para confirmar a conta",
-        });
-      }
-
-      return { error };
-    } catch (error: any) {
-      toast({
-        title: "Erro no cadastro",
-        description: "Ocorreu um erro inesperado",
-        variant: "destructive",
-      });
-      return { error };
-    }
-  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -210,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     signIn,
-    signUpStudent,
+    
     signOut,
     updateProfile,
   };
