@@ -19,10 +19,10 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -110,6 +110,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/auth`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao enviar email",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email enviado",
+          description: "Verifique seu email para redefinir sua senha",
+        });
+      }
+
+      return { error };
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar email",
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -161,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     signIn,
-    
+    resetPassword,
     signOut,
     updateProfile,
   };
