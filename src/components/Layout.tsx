@@ -1,9 +1,10 @@
-import { Navigate } from 'react-router-dom';
+
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Music, LogOut, User, Settings } from 'lucide-react';
+import { Music, LogOut, User, Lock } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
 interface LayoutProps {
@@ -12,6 +13,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { user, profile, loading, signOut } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -42,6 +44,14 @@ export function Layout({ children }: LayoutProps) {
       aluno: 'Aluno'
     };
     return roleMap[role as keyof typeof roleMap] || role;
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+  };
+
+  const handleChangePasswordClick = () => {
+    navigate('/change-password');
   };
 
   return (
@@ -102,13 +112,13 @@ export function Layout({ children }: LayoutProps) {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   Perfil
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Configurações
+                <DropdownMenuItem onClick={handleChangePasswordClick}>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Alterar Senha
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>

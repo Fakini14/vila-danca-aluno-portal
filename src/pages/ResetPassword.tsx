@@ -16,6 +16,7 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isValidResetFlow, setIsValidResetFlow] = useState(false);
 
   // Check if user came from password reset link
   useEffect(() => {
@@ -24,7 +25,12 @@ export default function ResetPassword() {
     const refreshToken = urlParams.get('refresh_token');
     const type = urlParams.get('type');
     
-    if (type !== 'recovery') {
+    console.log('Reset password URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+    
+    // Check if this is a valid password reset flow
+    if (type === 'recovery' || (accessToken && refreshToken)) {
+      setIsValidResetFlow(true);
+    } else if (type && type !== 'recovery') {
       toast({
         title: "Link inválido",
         description: "Este link de redefinição de senha não é válido ou expirou",
@@ -33,8 +39,18 @@ export default function ResetPassword() {
     }
   }, [toast]);
 
-  // Redirect if not authenticated
-  if (!loading && !user) {
+  // If user is authenticated but not from reset flow, they can still change password
+  useEffect(() => {
+    if (user && !isValidResetFlow) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (!urlParams.get('type') && !urlParams.get('access_token')) {
+        setIsValidResetFlow(true); // Allow authenticated users to change password
+      }
+    }
+  }, [user, isValidResetFlow]);
+
+  // Redirect if not authenticated and not a valid reset flow
+  if (!loading && !user && !isValidResetFlow) {
     return <Navigate to="/auth" replace />;
   }
 
