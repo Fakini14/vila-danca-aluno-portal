@@ -19,7 +19,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (userData: SignUpData) => Promise<{ error: any }>;
+  signUpStudent: (userData: SignUpData) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
@@ -30,7 +30,6 @@ interface SignUpData {
   nome_completo: string;
   cpf: string;
   whatsapp: string;
-  role?: 'admin' | 'professor' | 'funcionario' | 'aluno';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (userData: SignUpData) => {
+  const signUpStudent = async (userData: SignUpData) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
@@ -132,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             nome_completo: userData.nome_completo,
             cpf: userData.cpf,
             whatsapp: userData.whatsapp,
-            role: userData.role || 'aluno',
+            role: 'aluno', // Sempre aluno para cadastro público
           }
         }
       });
@@ -211,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     signIn,
-    signUp,
+    signUpStudent,
     signOut,
     updateProfile,
   };

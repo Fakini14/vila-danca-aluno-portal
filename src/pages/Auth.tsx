@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Music, ArrowLeft } from 'lucide-react';
 
 export default function Auth() {
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signUpStudent, user, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect if already authenticated
@@ -49,10 +49,9 @@ export default function Auth() {
       nome_completo: formData.get('nome_completo') as string,
       cpf: formData.get('cpf') as string,
       whatsapp: formData.get('whatsapp') as string,
-      role: 'aluno' as const, // Sempre aluno para cadastro público
     };
 
-    await signUp(userData);
+    await signUpStudent(userData);
     setIsLoading(false);
   };
 
@@ -79,7 +78,7 @@ export default function Auth() {
             Espaço Vila Dança & Arte
           </h1>
           <p className="text-muted-foreground">
-            Entre na sua conta ou cadastre-se como aluno
+            Acesse sua conta ou crie uma conta de aluno
           </p>
         </div>
 
