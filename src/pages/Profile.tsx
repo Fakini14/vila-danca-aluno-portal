@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function Profile() {
   const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome_completo: profile?.nome_completo || '',
@@ -50,6 +52,14 @@ export default function Profile() {
     <Layout>
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/dashboard')}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
           <h1 className="text-3xl font-bold">Meu Perfil</h1>
           <p className="text-muted-foreground">
             Gerencie suas informações pessoais
