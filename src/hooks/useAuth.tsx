@@ -21,6 +21,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<{ error: any }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
 
@@ -112,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/auth`;
+      const redirectUrl = `${window.location.origin}/reset-password`;
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
@@ -147,6 +148,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!user) return { error: new Error('User not authenticated') };
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao redefinir senha",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Senha redefinida",
+        description: "Sua senha foi redefinida com sucesso",
+      });
+
+      return { error: null };
+    } catch (error: any) {
+      toast({
+        title: "Erro ao redefinir senha",
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return { error };
+    }
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -194,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     resetPassword,
     signOut,
+    updatePassword,
     updateProfile,
   };
 
