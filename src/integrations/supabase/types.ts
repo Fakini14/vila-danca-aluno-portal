@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          priority: string
+          published: boolean
+          target_audience: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          published?: boolean
+          target_audience?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          published?: boolean
+          target_audience?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_teachers: {
         Row: {
           class_id: string
@@ -154,6 +193,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          asaas_invoice_url: string | null
+          asaas_payment_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string
+          enrollment_id: string | null
+          id: string
+          paid_date: string | null
+          payment_method: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          asaas_invoice_url?: string | null
+          asaas_payment_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date: string
+          enrollment_id?: string | null
+          id?: string
+          paid_date?: string | null
+          payment_method?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          asaas_invoice_url?: string | null
+          asaas_payment_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          enrollment_id?: string | null
+          id?: string
+          paid_date?: string | null
+          payment_method?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
