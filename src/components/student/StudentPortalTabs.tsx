@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudentDashboard } from './StudentDashboard';
 import { StudentPayments } from './StudentPayments';
-import { LayoutDashboard, CreditCard } from 'lucide-react';
+import { StudentAvailableClasses } from './StudentAvailableClasses';
+import { LayoutDashboard, CreditCard, Search } from 'lucide-react';
 
 export function StudentPortalTabs() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -17,10 +18,14 @@ export function StudentPortalTabs() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="classes" className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Turmas
           </TabsTrigger>
           <TabsTrigger value="payments" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
@@ -30,6 +35,10 @@ export function StudentPortalTabs() {
 
         <TabsContent value="dashboard" className="mt-6">
           <StudentDashboard />
+        </TabsContent>
+
+        <TabsContent value="classes" className="mt-6">
+          <StudentAvailableClasses />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">
