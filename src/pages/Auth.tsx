@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Music, ArrowLeft } from 'lucide-react';
+import { Loader2, Music, ArrowLeft, UserPlus } from 'lucide-react';
+
+type AuthMode = 'login' | 'signup' | 'forgotPassword';
 
 export default function Auth() {
-  const { signIn, resetPassword, user, loading } = useAuth();
+  const { signIn, signUp, resetPassword, user, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -37,6 +39,24 @@ export default function Auth() {
     setIsLoading(false);
   };
 
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const nome_completo = formData.get('nome_completo') as string;
+    const cpf = formData.get('cpf') as string;
+    const whatsapp = formData.get('whatsapp') as string;
+
+    const { error } = await signUp(email, password, { nome_completo, cpf, whatsapp });
+    if (!error) {
+      setAuthMode('login');
+    }
+    setIsLoading(false);
+  };
+
   const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -46,7 +66,7 @@ export default function Auth() {
 
     const { error } = await resetPassword(email);
     if (!error) {
-      setShowForgotPassword(false);
+      setAuthMode('login');
     }
     setIsLoading(false);
   };
@@ -68,18 +88,24 @@ export default function Auth() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <div className="p-3 rounded-full bg-primary/10">
-              <Music className="h-8 w-8 text-primary" />
+              {authMode === 'signup' ? (
+                <UserPlus className="h-8 w-8 text-primary" />
+              ) : (
+                <Music className="h-8 w-8 text-primary" />
+              )}
             </div>
           </div>
           <h1 className="text-3xl font-bold dance-text-gradient mb-2">
             Espaço Vila Dança & Arte
           </h1>
           <p className="text-muted-foreground">
-            Acesse sua conta no sistema
+            {authMode === 'login' && 'Acesse sua conta no sistema'}
+            {authMode === 'signup' && 'Crie sua conta no sistema'}
+            {authMode === 'forgotPassword' && 'Recupere sua senha'}
           </p>
         </div>
 
-        {showForgotPassword ? (
+        {authMode === 'forgotPassword' ? (
           <Card>
             <CardHeader>
               <CardTitle>Esqueci minha senha</CardTitle>
@@ -112,10 +138,93 @@ export default function Auth() {
                     type="button" 
                     variant="ghost" 
                     className="w-full"
-                    onClick={() => setShowForgotPassword(false)}
+                    onClick={() => setAuthMode('login')}
                   >
                     Voltar ao login
                   </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        ) : authMode === 'signup' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Criar Conta</CardTitle>
+              <CardDescription>
+                Preencha seus dados para se cadastrar no sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-nome">Nome Completo</Label>
+                  <Input
+                    id="signup-nome"
+                    name="nome_completo"
+                    type="text"
+                    required
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-cpf">CPF</Label>
+                  <Input
+                    id="signup-cpf"
+                    name="cpf"
+                    type="text"
+                    required
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-whatsapp">WhatsApp</Label>
+                  <Input
+                    id="signup-whatsapp"
+                    name="whatsapp"
+                    type="text"
+                    required
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="seu@email.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Senha</Label>
+                  <Input
+                    id="signup-password"
+                    name="password"
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading}
+                  >
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Criar Conta
+                  </Button>
+                  <div className="text-center text-sm text-muted-foreground">
+                    Já tem uma conta?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('login')}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Fazer login
+                    </button>
+                  </div>
                 </div>
               </form>
             </CardContent>
@@ -159,14 +268,25 @@ export default function Auth() {
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Entrar
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    className="w-full text-sm"
-                    onClick={() => setShowForgotPassword(true)}
-                  >
-                    Esqueci minha senha
-                  </Button>
+                  <div className="flex flex-col gap-2 text-center text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('forgotPassword')}
+                      className="text-muted-foreground hover:text-primary hover:underline"
+                    >
+                      Esqueci minha senha
+                    </button>
+                    <div className="text-muted-foreground">
+                      Não tem uma conta?{' '}
+                      <button
+                        type="button"
+                        onClick={() => setAuthMode('signup')}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Cadastre-se aqui
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </form>
             </CardContent>

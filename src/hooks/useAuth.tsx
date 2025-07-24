@@ -19,6 +19,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, userData: { nome_completo: string; cpf: string; whatsapp: string }) => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<{ error: any }>;
@@ -104,6 +105,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       toast({
         title: "Erro no login",
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  const signUp = async (email: string, password: string, userData: { nome_completo: string; cpf: string; whatsapp: string }) => {
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            nome_completo: userData.nome_completo,
+            cpf: userData.cpf,
+            whatsapp: userData.whatsapp,
+            role: 'aluno'
+          }
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Erro no cadastro",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Cadastro realizado!",
+          description: "Verifique seu email para confirmar sua conta",
+        });
+      }
+
+      return { error };
+    } catch (error: any) {
+      toast({
+        title: "Erro no cadastro",
         description: "Ocorreu um erro inesperado",
         variant: "destructive",
       });
@@ -226,6 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     signIn,
+    signUp,
     resetPassword,
     signOut,
     updatePassword,
