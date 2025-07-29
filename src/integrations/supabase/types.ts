@@ -92,9 +92,43 @@ export type Database = {
           },
         ]
       }
+      class_types: {
+        Row: {
+          active: boolean | null
+          color: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          nivel: Database["public"]["Enums"]["nivel_turma"]
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          color?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          nivel?: Database["public"]["Enums"]["nivel_turma"]
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          color?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          nivel?: Database["public"]["Enums"]["nivel_turma"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       classes: {
         Row: {
           ativa: boolean
+          capacidade_maxima: number | null
           created_at: string
           data_inicio: string
           data_termino: string | null
@@ -104,6 +138,10 @@ export type Database = {
           id: string
           modalidade: string
           nivel: Database["public"]["Enums"]["nivel_turma"]
+          nome: string | null
+          observacoes: string | null
+          professor_principal_id: string | null
+          sala: string | null
           tempo_total_minutos: number
           tipo: Database["public"]["Enums"]["tipo_turma"]
           updated_at: string
@@ -112,6 +150,7 @@ export type Database = {
         }
         Insert: {
           ativa?: boolean
+          capacidade_maxima?: number | null
           created_at?: string
           data_inicio: string
           data_termino?: string | null
@@ -121,6 +160,10 @@ export type Database = {
           id?: string
           modalidade: string
           nivel: Database["public"]["Enums"]["nivel_turma"]
+          nome?: string | null
+          observacoes?: string | null
+          professor_principal_id?: string | null
+          sala?: string | null
           tempo_total_minutos: number
           tipo: Database["public"]["Enums"]["tipo_turma"]
           updated_at?: string
@@ -129,6 +172,7 @@ export type Database = {
         }
         Update: {
           ativa?: boolean
+          capacidade_maxima?: number | null
           created_at?: string
           data_inicio?: string
           data_termino?: string | null
@@ -138,13 +182,25 @@ export type Database = {
           id?: string
           modalidade?: string
           nivel?: Database["public"]["Enums"]["nivel_turma"]
+          nome?: string | null
+          observacoes?: string | null
+          professor_principal_id?: string | null
+          sala?: string | null
           tempo_total_minutos?: number
           tipo?: Database["public"]["Enums"]["tipo_turma"]
           updated_at?: string
           valor_aula?: number
           valor_matricula?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "classes_professor_principal_id_fkey"
+            columns: ["professor_principal_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enrollments: {
         Row: {
@@ -244,44 +300,71 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cep: string | null
+          cidade: string | null
+          contato_emergencia: string | null
           cpf: string
           created_at: string
+          data_nascimento: string | null
           email: string
           email_confirmation_sent_at: string | null
           email_confirmation_token: string | null
           email_confirmed: boolean | null
+          endereco: string | null
+          estado: string | null
           id: string
+          informacoes_medicas: string | null
           nome_completo: string
+          observacoes: string | null
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["user_status"]
+          telefone_emergencia: string | null
           updated_at: string
           whatsapp: string
         }
         Insert: {
+          cep?: string | null
+          cidade?: string | null
+          contato_emergencia?: string | null
           cpf: string
           created_at?: string
+          data_nascimento?: string | null
           email: string
           email_confirmation_sent_at?: string | null
           email_confirmation_token?: string | null
           email_confirmed?: boolean | null
+          endereco?: string | null
+          estado?: string | null
           id: string
+          informacoes_medicas?: string | null
           nome_completo: string
+          observacoes?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
+          telefone_emergencia?: string | null
           updated_at?: string
           whatsapp: string
         }
         Update: {
+          cep?: string | null
+          cidade?: string | null
+          contato_emergencia?: string | null
           cpf?: string
           created_at?: string
+          data_nascimento?: string | null
           email?: string
           email_confirmation_sent_at?: string | null
           email_confirmation_token?: string | null
           email_confirmed?: boolean | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
+          informacoes_medicas?: string | null
           nome_completo?: string
+          observacoes?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
+          telefone_emergencia?: string | null
           updated_at?: string
           whatsapp?: string
         }
@@ -289,21 +372,36 @@ export type Database = {
       }
       staff: {
         Row: {
+          chave_pix: string | null
           created_at: string
+          dados_bancarios: Json | null
+          especialidades: string[] | null
           funcao: Database["public"]["Enums"]["user_role"]
           id: string
+          observacoes: string | null
+          taxa_comissao: number | null
           updated_at: string
         }
         Insert: {
+          chave_pix?: string | null
           created_at?: string
+          dados_bancarios?: Json | null
+          especialidades?: string[] | null
           funcao: Database["public"]["Enums"]["user_role"]
           id: string
+          observacoes?: string | null
+          taxa_comissao?: number | null
           updated_at?: string
         }
         Update: {
+          chave_pix?: string | null
           created_at?: string
+          dados_bancarios?: Json | null
+          especialidades?: string[] | null
           funcao?: Database["public"]["Enums"]["user_role"]
           id?: string
+          observacoes?: string | null
+          taxa_comissao?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -319,22 +417,37 @@ export type Database = {
       students: {
         Row: {
           created_at: string
+          data_nascimento: string | null
+          endereco_completo: string | null
           id: string
           parceiro_id: string | null
+          responsavel_email: string | null
+          responsavel_nome: string | null
+          responsavel_telefone: string | null
           sexo: Database["public"]["Enums"]["sexo"]
           updated_at: string
         }
         Insert: {
           created_at?: string
+          data_nascimento?: string | null
+          endereco_completo?: string | null
           id: string
           parceiro_id?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_telefone?: string | null
           sexo: Database["public"]["Enums"]["sexo"]
           updated_at?: string
         }
         Update: {
           created_at?: string
+          data_nascimento?: string | null
+          endereco_completo?: string | null
           id?: string
           parceiro_id?: string | null
+          responsavel_email?: string | null
+          responsavel_nome?: string | null
+          responsavel_telefone?: string | null
           sexo?: Database["public"]["Enums"]["sexo"]
           updated_at?: string
         }

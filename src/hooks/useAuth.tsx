@@ -21,6 +21,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: { nome_completo: string; cpf: string; whatsapp: string }) => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  resendConfirmation: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<{ error: any }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
@@ -39,8 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email_confirmed_at);
+        
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Handle email confirmation success
+        if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+          toast({
+            title: "Email confirmado!",
+            description: "Sua conta foi confirmada com sucesso. Bem-vindo!",
+          });
+        }
         
         if (session?.user) {
           // Fetch user profile
@@ -65,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -94,11 +105,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (error) {
-        toast({
-          title: "Erro no login",
-          description: error.message,
-          variant: "destructive",
-        });
+        // Handle specific email confirmation error
+        if (error.message.includes('Email not confirmed') || 
+            error.message.includes('email_not_confirmed') ||
+            error.message.includes('not confirmed')) {
+          toast({
+            title: "Email não confirmado",
+            description: "Verifique seu email e clique no link de confirmação. Se não recebeu, você pode solicitar um novo email.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro no login",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       }
       
       return { error };
@@ -112,11 +134,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, userData: { nome_completo: string; cpf: string; whatsapp: string }) => {
+  const signUp = async (email: string, password: string, userData: any) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}/auth/confirm`;
       
-      const { error } = await supabase.auth.signUp({
+      console.log('SignUp attempt:', {
+        email,
+        redirectUrl,
+        userData: {
+          nome_completo: userData.nome_completo,
+          cpf: userData.cpf,
+          whatsapp: userData.whatsapp,
+          role: userData.role || 'aluno'
+        }
+      });
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -125,29 +158,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             nome_completo: userData.nome_completo,
             cpf: userData.cpf,
             whatsapp: userData.whatsapp,
-            role: 'aluno'
+            sexo: userData.sexo,
+            data_nascimento: userData.data_nascimento,
+            endereco_completo: userData.endereco_completo,
+            responsavel_nome: userData.responsavel_nome,
+            responsavel_telefone: userData.responsavel_telefone,
+            responsavel_email: userData.responsavel_email,
+            role: userData.role || 'aluno'
           }
         }
       });
 
+      console.log('SignUp response:', {
+        data: data ? {
+          user: data.user ? {
+            id: data.user.id,
+            email: data.user.email,
+            email_confirmed_at: data.user.email_confirmed_at
+          } : null,
+          session: data.session ? 'present' : null
+        } : null,
+        error: error ? {
+          message: error.message,
+          status: error.status || 'no status'
+        } : null
+      });
+
       if (error) {
+        // Tratar diferentes tipos de erro
+        let errorTitle = "Erro no cadastro";
+        let errorDescription = error.message;
+
+        if (error.message.includes('already registered')) {
+          errorTitle = "Email já cadastrado";
+          errorDescription = "Este email já está cadastrado. Tente fazer login ou use outro email.";
+        } else if (error.message.includes('invalid email')) {
+          errorTitle = "Email inválido";
+          errorDescription = "Por favor, digite um email válido.";
+        } else if (error.message.includes('password')) {
+          errorTitle = "Senha inválida";
+          errorDescription = "A senha deve ter pelo menos 6 caracteres.";
+        }
+
         toast({
-          title: "Erro no cadastro",
-          description: error.message,
+          title: errorTitle,
+          description: errorDescription,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Cadastro realizado!",
-          description: "Verifique seu email para confirmar sua conta",
+          description: "Verifique seu email para confirmar sua conta. Confira também a pasta de spam.",
         });
       }
 
-      return { error };
+      return { error, data };
     } catch (error: any) {
+      console.error('Unexpected error during signUp:', error);
+      
       toast({
         title: "Erro no cadastro",
-        description: "Ocorreu um erro inesperado",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
       return { error };
@@ -186,11 +257,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resendConfirmation = async (email: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/auth/confirm`;
+      
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: redirectUrl,
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao reenviar confirmação",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email de confirmação reenviado",
+          description: "Verifique seu email e clique no link para confirmar sua conta",
+        });
+      }
+
+      return { error };
+    } catch (error: any) {
+      toast({
+        title: "Erro ao reenviar confirmação",
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
+      // Redirecionar para a página de login após logout
+      window.location.href = '/auth';
+      
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro no logout",
+        description: "Ocorreu um erro ao sair",
+        variant: "destructive",
+      });
+    }
   };
 
   const updatePassword = async (newPassword: string) => {
@@ -271,6 +394,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     resetPassword,
+    resendConfirmation,
     signOut,
     updatePassword,
     updateProfile,

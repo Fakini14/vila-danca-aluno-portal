@@ -19,13 +19,19 @@ const Dashboard = () => {
     return <Navigate to="/auth" replace />;
   }
 
+  // Redirecionar admin para o novo layout
+  if (profile?.role === 'admin' || profile?.role === 'funcionario') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  // Redirecionar professor para o portal do professor
+  if (profile?.role === 'professor') {
+    return <Navigate to="/teacher/dashboard" replace />;
+  }
+
   return (
     <Layout>
-      {profile?.role === 'aluno' ? (
-        <StudentPortal />
-      ) : (
-        <AdminDashboard />
-      )}
+      <StudentPortal />
     </Layout>
   );
 };
