@@ -18,161 +18,72 @@ export default function Confirm() {
   useEffect(() => {
     const confirmUser = async () => {
       try {
-        // Primeiro, tentar pegar dos query parameters normais
-        let token_hash = searchParams.get('token_hash');
-        let type = searchParams.get('type');
-        let error = searchParams.get('error');
-        let error_description = searchParams.get('error_description');
+        // Processar hash fragment
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const urlError = hashParams.get('error') || searchParams.get('error');
+        const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
 
-        // Se não encontrou nos query params, verificar no hash fragment
-        if (!token_hash && !type && window.location.hash) {
-          console.log('No query params found, checking hash fragment...');
-          
-          // Processar hash fragment (removendo o # inicial)
-          const hashString = window.location.hash.substring(1);
-          const hashParams = new URLSearchParams(hashString);
-          
-          token_hash = hashParams.get('token_hash') || hashParams.get('access_token');
-          type = hashParams.get('type') || 'email'; // default para email se não especificado
-          error = hashParams.get('error');
-          error_description = hashParams.get('error_description');
+        console.log('Confirm page - URL analysis:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          hasError: !!urlError,
+          errorDescription,
+          fullHash: window.location.hash
+        });
 
-          console.log('Hash fragment parameters:', {
-            hashString,
-            token_hash: token_hash ? 'present' : 'missing',
-            type,
-            error,
-            error_description
+        // Se temos access_token e refresh_token, estabelecer sessão manualmente
+        if (accessToken && refreshToken) {
+          console.log('Found tokens in URL, setting session manually...');
+          
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
           });
-        }
-        
-        console.log('Confirm page - Parameters received:', {
-          source: token_hash ? (searchParams.get('token_hash') ? 'query' : 'hash') : 'none',
-          token_hash: token_hash ? 'present' : 'missing',
-          type,
-          error,
-          error_description,
-          fullUrl: window.location.href,
-          search: window.location.search,
-          hash: window.location.hash
-        });
 
-        // Se há erro no parâmetro, verificar se ainda pode processar
-        if (error) {
-          console.error('Error in URL parameters:', { error, error_description });
-          
-          // Para server_error, ainda tentar processar se há token_hash
-          if (error === 'server_error' && token_hash && error_description?.includes('Error confirming user')) {
-            console.log('Server error but token_hash present, attempting to verify anyway...');
-            // Continuar para tentar verificar o token
-          } else if (error === 'access_denied') {
-            setErrorMessage('Acesso negado. O link pode ter expirado.');
-            setStatus('expired');
-            return;
-          } else {
-            setErrorMessage(error_description || `Erro: ${error}`);
-            setStatus('error');
-            return;
-          }
-        }
+          if (!error && data.session) {
+            console.log('Session established successfully:', {
+              userId: data.session.user.id,
+              email: data.session.user.email,
+              emailConfirmed: data.session.user.email_confirmed_at
+            });
 
-        // Verificar se temos os parâmetros necessários
-        if (!token_hash || !type) {
-          console.error('Missing required parameters:', { token_hash, type });
-          setErrorMessage('Parâmetros de confirmação não encontrados na URL');
-          setStatus('invalid');
-          return;
-        }
-
-        // Verificar se o tipo é válido
-        if (type !== 'email' && type !== 'signup') {
-          console.error('Invalid confirmation type:', type);
-          setErrorMessage(`Tipo de confirmação inválido: ${type}`);
-          setStatus('invalid');
-          return;
-        }
-
-        console.log('Attempting to verify OTP with Supabase...');
-
-        // Se temos access_token no hash, tentar usar exchangeCodeForSession
-        if (token_hash && window.location.hash && window.location.hash.includes('access_token')) {
-          console.log('Found access_token in hash, attempting to set session...');
-          
-          try {
-            // Tentar usar o getSession para capturar a sessão do hash
-            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-            
-            if (sessionData?.session && !sessionError) {
-              console.log('Session found from hash:', {
-                userId: sessionData.session.user.id,
-                email: sessionData.session.user.email,
-                emailConfirmed: sessionData.session.user.email_confirmed_at
-              });
-
-              setStatus('success');
-              
-              toast({
-                title: "Email confirmado com sucesso!",
-                description: "Sua conta foi ativada. Redirecionando...",
-              });
-
-              setTimeout(() => {
-                navigate('/dashboard');
-              }, 2000);
-              return;
-            }
-          } catch (hashError) {
-            console.error('Error processing hash session:', hashError);
-          }
-        }
-
-        // Tentar verificar o token com o Supabase
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash,
-          type: type as 'email' | 'signup'
-        });
-
-        console.log('Supabase verifyOtp response:', {
-          data: data ? {
-            user: data.user ? 'present' : 'null',
-            session: data.session ? 'present' : 'null'
-          } : 'null',
-          error: error ? {
-            message: error.message,
-            status: error.status
-          } : 'null'
-        });
-
-        if (error) {
-          console.error('Supabase verification error:', error);
-          
-          // Tratar diferentes tipos de erro
-          if (error.message.includes('expired') || error.message.includes('invalid')) {
-            setErrorMessage('Link de confirmação expirado ou inválido');
-            setStatus('expired');
-          } else if (error.message.includes('already confirmed')) {
-            setErrorMessage('Email já foi confirmado anteriormente');
             setStatus('success');
             
-            // Se já foi confirmado, redirecionar após 2 segundos
+            toast({
+              title: "Email confirmado com sucesso!",
+              description: "Sua conta foi ativada. Redirecionando...",
+            });
+
             setTimeout(() => {
-              navigate('/auth');
+              navigate('/dashboard');
             }, 2000);
-          } else {
-            setErrorMessage(`Erro na verificação: ${error.message}`);
-            setStatus('error');
+            return;
+          } else if (error) {
+            console.error('Error setting session:', error);
           }
-          return;
         }
 
-        // Verificação bem-sucedida
-        if (data && data.session && data.user) {
-          console.log('Email confirmation successful:', {
-            userId: data.user.id,
-            email: data.user.email,
-            emailConfirmed: data.user.email_confirmed_at
-          });
+        // Aguardar processamento automático do Supabase
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Verificar se há uma sessão ativa
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        console.log('Session check after delay:', {
+          session: session ? 'present' : 'null',
+          user: session?.user ? {
+            id: session.user.id,
+            email: session.user.email,
+            emailConfirmed: session.user.email_confirmed_at
+          } : 'null',
+          error: sessionError
+        });
 
+        // Se há sessão e o email foi confirmado, sucesso!
+        if (session?.user?.email_confirmed_at) {
+          console.log('Email confirmed successfully through automatic processing!');
           setStatus('success');
           
           toast({
@@ -180,35 +91,34 @@ export default function Confirm() {
             description: "Sua conta foi ativada. Redirecionando...",
           });
 
-          // Redirecionar para o dashboard após 2 segundos
           setTimeout(() => {
             navigate('/dashboard');
           }, 2000);
-        } else {
-          console.error('Verification succeeded but no session data returned');
-          
-          // Tentar verificar se o usuário já está logado
-          try {
-            const { data: currentSession } = await supabase.auth.getSession();
-            if (currentSession?.session?.user?.email_confirmed_at) {
-              console.log('User is already confirmed and logged in');
-              setStatus('success');
-              toast({
-                title: "Email já confirmado!",
-                description: "Sua conta já estava ativada. Redirecionando...",
-              });
-              setTimeout(() => {
-                navigate('/dashboard');
-              }, 2000);
-              return;
-            }
-          } catch (sessionError) {
-            console.error('Error checking current session:', sessionError);
-          }
-          
-          setErrorMessage('Confirmação processada mas sessão não foi criada. Tente fazer login.');
-          setStatus('error');
+          return;
         }
+
+        // Verificar erros
+        if (urlError) {
+          console.error('Error in URL:', { urlError, errorDescription });
+          
+          // Ignorar server_error se temos tokens
+          if (urlError === 'server_error' && (accessToken || refreshToken)) {
+            console.log('Ignoring server_error as we have tokens...');
+            setErrorMessage('Processando confirmação... Se o problema persistir, solicite um novo link.');
+            setStatus('error');
+          } else if (urlError === 'access_denied' || errorDescription?.includes('expired')) {
+            setErrorMessage('Link de confirmação expirado. Solicite um novo link.');
+            setStatus('expired');
+          } else {
+            setErrorMessage(errorDescription || 'Erro ao confirmar email');
+            setStatus('error');
+          }
+          return;
+        }
+
+        // Se não há sessão nem erro, o link pode ser inválido
+        setErrorMessage('Link de confirmação inválido ou expirado');
+        setStatus('invalid');
 
       } catch (error: any) {
         console.error('Unexpected error during confirmation:', error);
@@ -360,9 +270,12 @@ export default function Confirm() {
               <br />
               URL: {window.location.href}
               <br />
-              Token Hash: {searchParams.get('token_hash') ? 'present' : 'missing'}
-              <br />
-              Type: {searchParams.get('type') || 'missing'}
+              {errorMessage && (
+                <>
+                  Error: {errorMessage}
+                  <br />
+                </>
+              )}
             </p>
           </div>
         )}

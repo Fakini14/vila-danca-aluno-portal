@@ -38,7 +38,7 @@ interface EnrollmentModalProps {
   onSuccess: () => void;
 }
 
-type PaymentMethod = 'pix' | 'boleto' | 'cartao' | 'dinheiro';
+type PaymentMethod = 'online' | 'dinheiro';
 
 type EnrollmentStep = 1 | 2 | 3;
 
@@ -60,7 +60,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
       setSelectedClasses([]);
       setEnrollmentDate(format(new Date(), 'yyyy-MM-dd'));
       setMatriculaFee(0);
-      setSelectedPaymentMethod('dinheiro');
+      setSelectedPaymentMethod('online');
     }
   }, [open, studentId, fetchAvailableClasses]);
 
@@ -197,13 +197,13 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
     try {
       setLoading(true);
 
-      // Create enrollments for selected classes
+      // Create enrollments for selected classes (initially inactive)
       const enrollmentsData = selectedClasses.map(classId => ({
         student_id: studentId,
         class_id: classId,
         data_matricula: enrollmentDate,
-        valor_pago_matricula: matriculaFee / selectedClasses.length, // Distribute fee across classes
-        ativa: true,
+        valor_pago_matricula: matriculaFee / selectedClasses.length,
+        ativa: selectedPaymentMethod === 'dinheiro', // Only active if cash payment
       }));
 
       const { data: enrollments, error: enrollmentError } = await supabase
@@ -213,7 +213,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
 
       if (enrollmentError) throw enrollmentError;
 
-      // If there's a registration fee and payment method is cash, create payment record
+      // Create payment record
       if (matriculaFee > 0) {
         const paymentData = {
           student_id: studentId,
@@ -222,24 +222,72 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
           due_date: enrollmentDate,
           status: selectedPaymentMethod === 'dinheiro' ? 'pago' : 'pendente',
           paid_date: selectedPaymentMethod === 'dinheiro' ? enrollmentDate : null,
-          payment_method: selectedPaymentMethod,
+          payment_method: selectedPaymentMethod === 'dinheiro' ? 'dinheiro' : null,
           description: `Taxa de matrícula - ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''}`,
         };
 
-        const { error: paymentError } = await supabase
+        const { data: payment, error: paymentError } = await supabase
           .from('payments')
-          .insert(paymentData);
+          .insert(paymentData)
+          .select()
+          .single();
 
-        if (paymentError) {
-          console.error('Erro ao criar registro de pagamento:', paymentError);
-          // Don't throw error here, enrollment was successful
+        if (paymentError) throw paymentError;
+
+        // If online payment, redirect to checkout
+        if (selectedPaymentMethod === 'online') {
+          // Get student profile for customer data
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', studentId)
+            .single();
+
+          if (profile) {
+            // Call create-enrollment-payment edge function
+            const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-enrollment-payment', {
+              body: {
+                payment_id: payment.id,
+                student_id: studentId,
+                enrollment_ids: enrollments.map(e => e.id),
+                amount: matriculaFee,
+                description: `Matrícula - ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''}`,
+                due_date: enrollmentDate,
+                customer: {
+                  name: profile.nome_completo,
+                  email: profile.email,
+                  cpfCnpj: profile.cpf,
+                  phone: profile.whatsapp || profile.telefone
+                }
+              }
+            });
+
+            if (checkoutError) throw checkoutError;
+
+            if (checkoutData?.checkout_url) {
+              // Open checkout in new window
+              window.open(checkoutData.checkout_url, '_blank');
+              
+              toast({
+                title: 'Redirecionando para o pagamento',
+                description: 'Uma nova janela foi aberta para finalizar o pagamento.',
+              });
+            }
+          }
         }
       }
 
-      toast({
-        title: 'Sucesso',
-        description: `Aluno matriculado em ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''} com sucesso`,
-      });
+      if (selectedPaymentMethod === 'dinheiro') {
+        toast({
+          title: 'Sucesso',
+          description: `Aluno matriculado em ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''} com sucesso`,
+        });
+      } else {
+        toast({
+          title: 'Matrícula iniciada',
+          description: 'A matrícula será confirmada após o pagamento.',
+        });
+      }
 
       onSuccess();
       onOpenChange(false);
@@ -536,60 +584,83 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             </>
           )}
 
-          {/* Step 3: Forma de Pagamento */}
+          {/* Step 3: Checkout E-commerce */}
           {currentStep === 3 && (
             <>
               <div>
-                <h4 className="font-medium mb-4">Forma de Pagamento da Matrícula</h4>
+                <h4 className="font-medium mb-4">Finalizar Matrícula</h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { id: 'dinheiro', label: 'Dinheiro', description: 'Pagamento em espécie' },
-                    { id: 'pix', label: 'PIX', description: 'Transferência instantânea' },
-                    { id: 'boleto', label: 'Boleto', description: 'Boleto bancário' },
-                    { id: 'cartao', label: 'Cartão', description: 'Cartão de crédito/débito' },
-                  ].map((method) => (
+                <div className="space-y-4">
+                  <div className="p-6 border rounded-lg bg-gradient-to-r from-primary/5 to-primary/10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h5 className="font-semibold">Pagamento Online Seguro</h5>
+                        <p className="text-sm text-muted-foreground">Powered by Asaas - Gateway de pagamento brasileiro</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span>PIX Instantâneo</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <span>Boleto Bancário</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                        <span>Cartão de Crédito</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                      <div className="text-sm text-amber-800">
+                        <p className="font-medium">Importante:</p>
+                        <p>• A matrícula será confirmada após o pagamento</p>
+                        <p>• Você receberá um email de confirmação</p>
+                        <p>• Em caso de dúvidas, entre em contato conosco</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div
-                      key={method.id}
-                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                        selectedPaymentMethod === method.id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground'
-                      }`}
-                      onClick={() => setSelectedPaymentMethod(method.id as PaymentMethod)}
+                      className="border rounded-lg p-4 cursor-pointer transition-colors hover:border-primary hover:bg-primary/5"
+                      onClick={() => setSelectedPaymentMethod('online')}
                     >
                       <div className="flex items-center gap-3">
-                        <div
-                          className={`w-4 h-4 rounded-full border-2 ${
-                            selectedPaymentMethod === method.id
-                              ? 'border-primary bg-primary'
-                              : 'border-muted-foreground'
-                          }`}
-                        />
+                        <div className="w-4 h-4 rounded-full border-2 border-primary bg-primary" />
                         <div>
-                          <p className="font-medium">{method.label}</p>
-                          <p className="text-sm text-muted-foreground">{method.description}</p>
+                          <p className="font-medium">Pagamento Online</p>
+                          <p className="text-sm text-muted-foreground">PIX, Boleto ou Cartão</p>
                         </div>
                       </div>
                     </div>
-                  ))}
+                    <div
+                      className="border rounded-lg p-4 cursor-pointer transition-colors hover:border-muted-foreground"
+                      onClick={() => setSelectedPaymentMethod('dinheiro')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 ${
+                          selectedPaymentMethod === 'dinheiro' 
+                            ? 'border-primary bg-primary' 
+                            : 'border-muted-foreground'
+                        }`} />
+                        <div>
+                          <p className="font-medium">Pagamento em Dinheiro</p>
+                          <p className="text-sm text-muted-foreground">Registrar manualmente</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                {selectedPaymentMethod === 'dinheiro' && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      💡 Pagamento em dinheiro será registrado como pago após confirmação do recebimento.
-                    </p>
-                  </div>
-                )}
-
-                {selectedPaymentMethod !== 'dinheiro' && (
-                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                      ⚠️ A integração com gateway de pagamento será implementada em breve.
-                    </p>
-                  </div>
-                )}
               </div>
 
               <Separator />
@@ -610,8 +681,8 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
                     <p className="font-medium">R$ {matriculaFee.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Forma pagamento:</p>
-                    <p className="font-medium capitalize">{selectedPaymentMethod}</p>
+                    <p className="text-muted-foreground">Total a pagar:</p>
+                    <p className="font-bold text-primary">R$ {matriculaFee.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
