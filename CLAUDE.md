@@ -18,7 +18,9 @@ The project is in active development with the following modules already implemen
 - ✅ **Complete Admin Student Management** (Read-only list, detailed view with 5 tabs, enrollment system)
 - ✅ **Complete Enrollment System** (3-step workflow: selection, confirmation, payment)
 - ✅ **Secure Authentication Flow** (Students register themselves, admin only edits data)
-- ✅ Payment integration preparation (ASAAS gateway)
+- ✅ **Student Self-Enrollment System** (Complete RLS policies for student-initiated enrollments)
+- ✅ **E-commerce Checkout System** (Full Asaas integration with PIX, Boleto, Credit Card)
+- ✅ **Payment Webhook Automation** (Automatic enrollment activation after payment confirmation)
 
 ### Key Business Logic
 - **Multi-role system**: Admin, Teacher (Professor), Student (Aluno)
@@ -29,28 +31,61 @@ The project is in active development with the following modules already implemen
 - **Event management**: Separate module for school events and ticket sales
 
 ### Development Roadmap Reference
-This project follows a detailed 28-day development plan divided into 5 phases:
+This project follows a detailed 28-day development plan divided into 6 phases:
 1. **PHASE 0**: Initial setup (Days 1-3) ✅
 2. **PHASE 1**: Login system (Days 4-5) ✅ 
 3. **PHASE 2**: Admin portal (Days 6-15) ✅ **COMPLETED** - Class management, student management, secure auth
-4. **PHASE 3**: Student portal (Days 16-20) 📋 *Next Priority*
+4. **PHASE 3**: Student portal (Days 16-20) 📋 *IN PROGRESS* - Dashboard and available classes view completed
 5. **PHASE 4**: Teacher portal (Days 21-23) ✅ **COMPLETED AHEAD OF SCHEDULE**
-6. **PHASE 5**: Event system (Days 24-28)
+6. **PHASE 5**: Event system (Days 24-28) - *Next after completing Student Portal*
 
 **Current Priority**: Begin Phase 3 - Student Portal development as admin and teacher portals are complete.
+
+### Recent Fixes - Student Self-Enrollment RLS Policies
+
+**Date**: July 29, 2025
+**Issue**: Students couldn't enroll themselves due to Row Level Security (RLS) policy restrictions.
+
+**Root Cause**:
+1. Missing student records for users with `aluno` role
+2. RLS policies only allowed staff to INSERT enrollments - students couldn't create their own
+3. RLS policies didn't allow students to INSERT payment records
+
+**Solution Implemented**:
+1. ✅ **Created missing student records** for all `aluno` users with `auth_status = 'active'`
+2. ✅ **Added RLS policy**: "Students can create their own enrollments" - allows INSERT with `student_id = auth.uid()`
+3. ✅ **Added RLS policy**: "Students can create their own payments" - allows INSERT with `student_id = auth.uid()`
+4. ✅ **Created auto-trigger**: `trigger_auto_create_student` automatically creates student records for new `aluno` profiles
+5. ✅ **Added helper function**: `ensure_student_record()` for manual student record creation
+
+**Database Changes**:
+```sql
+-- New RLS Policies
+CREATE POLICY "Students can create their own enrollments" ON enrollments FOR INSERT WITH CHECK (auth.uid() = student_id AND EXISTS (SELECT 1 FROM students WHERE id = auth.uid() AND auth_status = 'active'));
+
+CREATE POLICY "Students can create their own payments" ON payments FOR INSERT WITH CHECK (auth.uid() = student_id AND EXISTS (SELECT 1 FROM students WHERE id = auth.uid() AND auth_status = 'active'));
+
+-- Auto-creation trigger for new student users
+CREATE TRIGGER trigger_auto_create_student AFTER INSERT ON profiles FOR EACH ROW EXECUTE FUNCTION auto_create_student_record();
+```
+
+**Result**: Students can now successfully enroll themselves in classes and access the checkout system.
 
 ## Development Commands
 
 ### Core Development
-- `npm run dev` - Start development server (Vite)
+- `npm run dev` - Start development server (Vite on http://localhost:5173)
 - `npm run build` - Build for production
 - `npm run build:dev` - Build in development mode
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint to check code quality
+- `npm run preview` - Preview production build locally
 
 ### Package Management
 - `npm i` - Install dependencies
 - Uses npm with package-lock.json
+
+### Test Running
+**Note**: No test framework is currently configured. When implementing tests, install a test runner like Vitest or Jest.
 
 ## Architecture Overview
 
@@ -59,20 +94,27 @@ This is a React-based dance school student portal built with modern web technolo
 ### Tech Stack
 - **Frontend**: React 18 + TypeScript + Vite
 - **UI Framework**: shadcn/ui with Radix UI components
-- **Styling**: Tailwind CSS
-- **Backend**: Supabase (PostgreSQL database + Auth)
+- **Styling**: Tailwind CSS + CSS variables for theming
+- **Backend**: Supabase (PostgreSQL database + Auth + Edge Functions)
 - **State Management**: TanStack Query for server state
-- **Routing**: React Router DOM
+- **Routing**: React Router DOM v6
 - **Forms**: React Hook Form with Zod validation
+- **Payment Gateway**: Asaas (PIX, Boleto, Credit Card)
+- **Icons**: Lucide React
+- **Date Handling**: date-fns
+- **Notifications**: Sonner toast library
 
 ### Database Schema
 The Supabase database includes these main entities:
 - `profiles` - User base information (linked to Supabase auth)
-- `students` - Student-specific data
+- `students` - Student-specific data with auth_status tracking
 - `staff` - Staff members (teachers, admin, etc.)
-- `classes` - Dance classes with schedules and pricing
-- `enrollments` - Student enrollments in classes
+- `class_types` - Dance modalities (Ballet, Jazz, etc.) with colors
+- `classes` - Dance classes with schedules, pricing, and teacher assignments
+- `enrollments` - Student enrollments in classes with status tracking
 - `payments` - Payment tracking with ASAAS integration
+- `attendance` - Class attendance records for commission calculations
+- `notes` - Administrative notes about students
 - `announcements` - System announcements
 
 ### Key User Roles
@@ -86,18 +128,22 @@ The Supabase database includes these main entities:
 #### Authentication Flow
 - Uses Supabase Auth with custom `useAuth` hook (`src/hooks/useAuth.tsx`)
 - Profile data fetched from `profiles` table after authentication
-- Role-based routing and component rendering
+- Role-based routing with `ProtectedRoute` component
+- Self-service registration for students, admin approval for teachers
 
 #### Main Components
-- `Dashboard.tsx` - Main entry point, renders different components based on user role
-- `StudentPortal.tsx` - Student-specific interface
-- `AdminDashboard.tsx` - Administrative interface
-- `Layout.tsx` - Common layout wrapper
+- `src/pages/Dashboard.tsx` - Main entry point, renders different dashboards based on user role
+- `src/components/StudentPortal.tsx` - Student-specific interface with tabs
+- `src/components/AdminDashboard.tsx` - Administrative interface with stats
+- `src/layouts/AdminLayout.tsx` - Admin portal layout with sidebar
+- `src/layouts/TeacherLayout.tsx` - Teacher portal layout
 
 #### Component Organization
 - `src/components/ui/` - shadcn/ui components (auto-generated, avoid manual editing)
-- `src/components/forms/` - Modal forms for creating entities
+- `src/components/admin/` - Admin-specific components (students/, charts/, tables/, forms/)
 - `src/components/student/` - Student-specific components
+- `src/components/teacher/` - Teacher-specific components
+- `src/components/checkout/` - E-commerce checkout flow components
 - `src/pages/` - Route-level components
 - `src/hooks/` - Custom React hooks
 - `src/integrations/supabase/` - Supabase client and type definitions
@@ -113,15 +159,27 @@ The Supabase database includes these main entities:
 - Database migrations stored in `supabase/migrations/`
 - Edge functions in `supabase/functions/` for payment processing and email notifications
 - RLS (Row Level Security) policies control data access
+- MCP Server configured for Supabase (see `.mcp.json`)
 
 #### UI Components
 - All UI components use shadcn/ui patterns
 - Consistent styling with Tailwind CSS
 - Dark/light theme support via `next-themes`
+- Form validation with Zod schemas
 
-#### Payment Integration
-- ASAAS payment gateway integration via Supabase Edge Functions
-- Payment status tracking and invoice generation
+#### Payment Integration (**NEWLY IMPLEMENTED**)
+- **Complete E-commerce Checkout**: Professional checkout flow with Asaas integration
+- **Multiple Payment Methods**: PIX, Boleto, Credit Card support
+- **Webhook Automation**: Automatic enrollment activation after payment confirmation
+- **Edge Functions**: 
+  - `create-enrollment-payment`: Handles payment creation and customer management
+  - `asaas-webhook`: Processes payment confirmations and activates enrollments
+  - `send-enrollment-confirmation`: Sends beautiful confirmation emails
+- **Checkout Pages**: 
+  - `/checkout/:paymentId`: Main checkout interface
+  - `/checkout/success`: Payment confirmation page
+  - `/checkout/failure`: Payment failure handling with retry options
+- **Security**: Full encryption and secure payment processing through Asaas gateway
 
 ## 🎯 DEVELOPMENT GUIDELINES
 
@@ -133,6 +191,9 @@ When working with this codebase:
 5. Maintain Portuguese language for user-facing text
 6. **Check the detailed roadmap below** to understand current development phase and next steps
 7. **Update project status** in this file when completing major milestones
+8. Run `npm run lint` before committing to ensure code quality
+9. Use absolute imports with `@/` prefix (configured in tsconfig)
+10. Follow existing file naming conventions (PascalCase for components, kebab-case for pages)
 
 ## 📅 DETAILED DEVELOPMENT ROADMAP
 
@@ -140,9 +201,9 @@ When working with this codebase:
 Update this section when working on the project to track progress:
 
 **Current Focus**: PHASE 3 - Student Portal (Days 16-20)
-**Last Completed**: Day 12 - Complete Enrollment System with 3-Step Workflow
-**Next Priority**: Day 13-14 - Financial System Development
-**Major Achievement**: Enrollment system with multi-step workflow, payment method selection, and conflict validation
+**Last Completed**: Day 12+ - E-commerce Checkout System Implementation
+**Next Priority**: Complete Day 13-14 - Student Portal Development
+**Major Achievement**: ✅ **BREAKTHROUGH**: Complete E-commerce checkout system with Asaas integration
 
 ### ✅ COMPLETED PHASES SUMMARY
 
@@ -166,6 +227,18 @@ Update this section when working on the project to track progress:
   - ✅ **Step 3**: Payment method selection (PIX, Boleto, Card, Cash)
   - ✅ **Advanced UX**: Step indicator, navigation controls, and validation
   - ✅ **Database Integration**: Enrollment and payment record creation
+
+- ✅ **Day 12+**: E-commerce Checkout System Implementation (**MAJOR BREAKTHROUGH**)
+  - ✅ **Phase 1**: EnrollmentModal reestructured with e-commerce checkout flow
+  - ✅ **Phase 1**: CheckoutPage.tsx created with professional Asaas interface
+  - ✅ **Phase 2**: create-enrollment-payment Edge Function for multiple classes
+  - ✅ **Phase 2**: asaas-webhook Edge Function for automatic confirmations
+  - ✅ **Phase 3**: CheckoutSuccess & CheckoutFailure pages with complete UX
+  - ✅ **Phase 3**: App.tsx routes updated for /checkout/* endpoints
+  - ✅ **Phase 3**: send-enrollment-confirmation Edge Function for emails
+  - ✅ **Integration**: Full Asaas payment gateway with PIX, Boleto, and Credit Card
+  - ✅ **Automation**: Webhook-driven enrollment activation after payment confirmation
+  - ✅ **Security**: Professional checkout flow with encrypted payment processing
 
 **PHASE 4 - Teacher Portal (Days 21-23)**: COMPLETED AHEAD OF SCHEDULE  
 - ✅ Complete teacher dashboard with today's classes and stats
@@ -652,11 +725,16 @@ TELA: /admin/events/[id]/bar
 - Aceitar pagamento
 
 #### 🔧 DETAILED TECHNICAL CONFIGURATIONS
-**Environment Variables (.env):**
-VITE_SUPABASE_URL=sua_url_aqui
-VITE_SUPABASE_ANON_KEY=sua_anon_key_aqui
-VITE_ASAAS_API_KEY=sua_api_key_asaas
-VITE_ASAAS_WEBHOOK_TOKEN=token_webhook
+
+**Environment Variables (.env.local):**
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_ASAAS_API_KEY=your_asaas_api_key
+VITE_ASAAS_WEBHOOK_TOKEN=your_webhook_token
+```
+
+**Important**: The project uses Vite, so all client-side environment variables must be prefixed with `VITE_`
 **Route Structure:**
 typescript// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
@@ -760,3 +838,121 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
   
   return <>{children}</>
 }
+
+#### 🔌 Supabase Edge Functions
+
+The project includes several Edge Functions for payment and notification handling:
+
+1. **create-enrollment-payment** - Creates Asaas payment for student enrollments
+   - Handles multiple class enrollments in a single payment
+   - Creates or updates Asaas customer records
+   - Generates payment links for PIX, Boleto, or Credit Card
+
+2. **asaas-webhook** - Processes Asaas payment webhooks
+   - Validates webhook authenticity
+   - Updates payment status in database
+   - Activates enrollments upon payment confirmation
+
+3. **send-enrollment-confirmation** - Sends confirmation emails
+   - Beautiful HTML email templates
+   - Includes enrollment details and payment information
+
+4. **send-staff-invitation** / **resend-staff-invitation** - Staff onboarding emails
+   - Sends invitation to new staff members
+   - Handles invitation resending
+
+**Edge Function Deployment**:
+```bash
+# Deploy all functions
+supabase functions deploy
+
+# Deploy specific function
+supabase functions deploy function-name
+```
+
+## 🛠️ Common Development Tasks
+
+### Adding a New Feature
+1. Check the current development phase in the roadmap
+2. Create components in the appropriate directory (`admin/`, `student/`, `teacher/`)
+3. Use existing UI components and patterns
+4. Add proper TypeScript types
+5. Implement proper error handling with toast notifications
+6. Update CLAUDE.md with the completed feature
+
+### Working with Forms
+```typescript
+// Example form pattern used throughout the project
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const formSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+});
+
+const form = useForm<z.infer<typeof formSchema>>({
+  resolver: zodResolver(formSchema),
+});
+```
+
+### Database Queries with TanStack Query
+```typescript
+// Pattern for data fetching
+const { data, isLoading, error } = useQuery({
+  queryKey: ['students'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .order('name');
+    
+    if (error) throw error;
+    return data;
+  },
+});
+```
+
+### Adding New Routes
+1. Add route in `src/App.tsx`
+2. Wrap with `ProtectedRoute` if authentication required
+3. Use appropriate layout component (`AdminLayout`, `TeacherLayout`)
+4. Follow existing URL patterns (`/admin/*`, `/student/*`, `/teacher/*`)
+
+## 📝 Project-Specific Patterns
+
+### Authentication Check Pattern
+```typescript
+const { profile } = useAuth();
+if (profile?.role !== 'admin') {
+  return <Navigate to="/unauthorized" />;
+}
+```
+
+### Toast Notifications Pattern
+```typescript
+import { toast } from "sonner";
+
+// Success
+toast.success("Turma criada com sucesso!");
+
+// Error
+toast.error("Erro ao criar turma");
+```
+
+### Date Formatting Pattern
+```typescript
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+```
+
+## 🚨 Important Reminders
+- **NEVER** expose API keys in client-side code
+- **ALWAYS** use RLS policies for data security
+- **MAINTAIN** Portuguese language for all user-facing text
+- **FOLLOW** the existing code style and patterns
+- **UPDATE** this file when completing major features
+- **TEST** enrollment flows thoroughly as they involve payments

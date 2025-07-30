@@ -28,6 +28,11 @@ import AdminEvents from "./pages/admin/Events";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
 
+// Checkout Pages
+import { CheckoutPage } from "./components/checkout/CheckoutPage";
+import { CheckoutSuccess } from "./components/checkout/CheckoutSuccess";
+import { CheckoutFailure } from "./components/checkout/CheckoutFailure";
+
 // Teacher Layout and Pages
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherDashboard from "./pages/teacher/Dashboard";
@@ -57,6 +62,11 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/change-password" element={<ChangePassword />} />
+            
+            {/* Checkout Routes */}
+            <Route path="/checkout/:paymentId" element={<CheckoutPage />} />
+            <Route path="/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="/checkout/failure" element={<CheckoutFailure />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={
