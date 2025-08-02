@@ -45,13 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Handle email confirmation success
-        if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
-          toast({
-            title: "Email confirmado!",
-            description: "Sua conta foi confirmada com sucesso. Bem-vindo!",
-          });
-        }
         
         if (session?.user) {
           // Fetch user profile

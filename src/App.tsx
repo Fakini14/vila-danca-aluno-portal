@@ -44,6 +44,7 @@ import TeacherReports from "./pages/teacher/Reports";
 
 // Protected Route Component
 import ProtectedRoute from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -71,7 +72,9 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin', 'funcionario']}>
-                <AdminLayout />
+                <ErrorBoundary>
+                  <AdminLayout />
+                </ErrorBoundary>
               </ProtectedRoute>
             }>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
