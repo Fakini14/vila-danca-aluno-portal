@@ -1,5 +1,5 @@
-import { AdminDashboardFixed } from '@/components/AdminDashboardFixed';
+import { AdminDashboard } from '@/components/AdminDashboard';
 
 export default function Dashboard() {
-  return <AdminDashboardFixed />;
+  return <AdminDashboard mode="full" />;
 }

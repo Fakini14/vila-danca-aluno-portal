@@ -20,9 +20,9 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminStudents from "./pages/admin/Students";
 import AdminStudentDetail from "./pages/admin/StudentDetail";
 import AdminTeachers from "./pages/admin/Teachers";
-import AdminClassTypes from "./pages/admin/ClassTypes";
 import AdminClasses from "./pages/admin/Classes";
 import AdminNewClass from "./pages/admin/NewClass";
+import AdminClassTypes from "./pages/admin/ClassTypes";
 import AdminFinance from "./pages/admin/Finance";
 import AdminEvents from "./pages/admin/Events";
 import AdminReports from "./pages/admin/Reports";
@@ -82,9 +82,9 @@ const App = () => (
               <Route path="students" element={<AdminStudents />} />
               <Route path="students/:id" element={<AdminStudentDetail />} />
               <Route path="teachers" element={<AdminTeachers />} />
-              <Route path="class-types" element={<AdminClassTypes />} />
               <Route path="classes" element={<AdminClasses />} />
               <Route path="classes/new" element={<AdminNewClass />} />
+              <Route path="class-types" element={<AdminClassTypes />} />
               <Route path="finance" element={<AdminFinance />} />
               <Route path="events" element={<AdminEvents />} />
               <Route path="reports" element={<AdminReports />} />

@@ -3,73 +3,41 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, GraduationCap, UserPlus, DollarSign, TrendingUp, AlertTriangle, BookOpen, Calendar, BarChart3, Settings, ArrowRight } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAdminStats } from '@/hooks/useAdminStats';
+import { ADMIN_QUICK_ACTIONS } from '@/constants/navigation';
 import { EnrollmentTrendChart } from '@/components/admin/charts/EnrollmentTrendChart';
 import { RevenueByModalityChart } from '@/components/admin/charts/RevenueByModalityChart';
 import { ClassOccupancyChart } from '@/components/admin/charts/ClassOccupancyChart';
 import { RecentPaymentsTable } from '@/components/admin/tables/RecentPaymentsTable';
 import { BirthdaysTable } from '@/components/admin/tables/BirthdaysTable';
 
-export function AdminDashboard() {
+interface AdminDashboardProps {
+  mode?: 'full' | 'simple';
+}
+
+export function AdminDashboard({ mode = 'full' }: AdminDashboardProps) {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const shouldFetchStats = mode === 'full';
+  const { data: stats, isLoading: statsLoading, error: statsError } = useAdminStats();
+  
+  // Override stats data for simple mode
+  const actualStats = shouldFetchStats ? stats : null;
+  const actualLoading = shouldFetchStats ? statsLoading : false;
+  const actualError = shouldFetchStats ? statsError : null;
 
-  const quickActions = [
-    { 
-      icon: Users, 
-      title: 'Gerenciar Alunos', 
-      description: 'Visualizar e gerenciar informações dos alunos',
-      path: '/admin/students',
-      color: 'text-blue-500'
-    },
-    { 
-      icon: GraduationCap, 
-      title: 'Gerenciar Professores', 
-      description: 'Administrar equipe de professores',
-      path: '/admin/teachers',
-      color: 'text-green-500'
-    },
-    { 
-      icon: BookOpen, 
-      title: 'Gerenciar Turmas', 
-      description: 'Criar e organizar turmas e horários',
-      path: '/admin/classes',
-      color: 'text-purple-500'
-    },
-    { 
-      icon: DollarSign, 
-      title: 'Sistema Financeiro', 
-      description: 'Controlar pagamentos e mensalidades',
-      path: '/admin/finance',
-      color: 'text-green-600'
-    },
-    { 
-      icon: Calendar, 
-      title: 'Eventos', 
-      description: 'Organizar eventos e apresentações',
-      path: '/admin/events',
-      color: 'text-orange-500'
-    },
-    { 
-      icon: BarChart3, 
-      title: 'Relatórios', 
-      description: 'Visualizar estatísticas e relatórios',
-      path: '/admin/reports',
-      color: 'text-indigo-500'
-    }
-  ];
+  const quickActions = ADMIN_QUICK_ACTIONS;
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold dance-text-gradient">
+          <h1 className="text-3xl font-bold dance-text-gradient mb-2">
             Dashboard Administrativo
           </h1>
-          <p className="text-muted-foreground">
-            Bem-vindo de volta, {profile?.nome_completo}
+          <p className="text-muted-foreground text-lg">
+            Bem-vindo de volta, {profile?.nome_completo || 'Administrador'}
           </p>
         </div>
         <Badge variant="secondary" className="px-3 py-1">
@@ -77,6 +45,18 @@ export function AdminDashboard() {
            profile?.role === 'funcionario' ? 'Funcionário' : 'Professor'}
         </Badge>
       </div>
+
+      {/* Error Card - Only for full mode */}
+      {mode === 'full' && actualError && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-800">Erro de Dados</CardTitle>
+            <CardDescription className="text-red-600">
+              Erro ao carregar estatísticas: {actualError?.message || 'Erro desconhecido'}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -87,14 +67,18 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <div className="animate-pulse h-8 bg-muted rounded w-16"></div>
-              ) : (
-                stats?.totalActiveStudents || 0
+              {mode === 'simple' ? '--' : (
+                actualLoading ? (
+                  <div className="animate-pulse h-8 bg-muted rounded w-16"></div>
+                ) : (
+                  actualStats?.totalActiveStudents || 0
+                )
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Alunos com matrículas ativas
+              {mode === 'simple' ? 'Carregando dados...' : (
+                actualLoading ? 'Carregando...' : 'Alunos com matrículas ativas'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -106,18 +90,22 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <div className="animate-pulse h-8 bg-muted rounded w-24"></div>
-              ) : (
-                new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL',
-                  minimumFractionDigits: 0,
-                }).format(stats?.monthRevenue || 0)
+              {mode === 'simple' ? '--' : (
+                actualLoading ? (
+                  <div className="animate-pulse h-8 bg-muted rounded w-24"></div>
+                ) : (
+                  new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    minimumFractionDigits: 0,
+                  }).format(actualStats?.monthRevenue || 0)
+                )
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pagamentos recebidos este mês
+              {mode === 'simple' ? 'Carregando dados...' : (
+                actualLoading ? 'Carregando...' : 'Pagamentos recebidos este mês'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -129,14 +117,18 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <div className="animate-pulse h-8 bg-muted rounded w-16"></div>
-              ) : (
-                `${(stats?.defaultRate || 0).toFixed(1)}%`
+              {mode === 'simple' ? '--' : (
+                actualLoading ? (
+                  <div className="animate-pulse h-8 bg-muted rounded w-16"></div>
+                ) : (
+                  `${(actualStats?.defaultRate || 0).toFixed(1)}%`
+                )
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pagamentos em atraso
+              {mode === 'simple' ? 'Carregando dados...' : (
+                actualLoading ? 'Carregando...' : 'Pagamentos em atraso'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -148,14 +140,18 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? (
-                <div className="animate-pulse h-8 bg-muted rounded w-12"></div>
-              ) : (
-                stats?.classesToday || 0
+              {mode === 'simple' ? '--' : (
+                actualLoading ? (
+                  <div className="animate-pulse h-8 bg-muted rounded w-12"></div>
+                ) : (
+                  actualStats?.classesToday || 0
+                )
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Turmas programadas para hoje
+              {mode === 'simple' ? 'Carregando dados...' : (
+                actualLoading ? 'Carregando...' : 'Turmas programadas para hoje'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -207,83 +203,88 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {/* Gráficos */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Relatórios e Análises</h2>
-          <p className="text-sm text-muted-foreground">
-            Dados em tempo real do sistema
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <EnrollmentTrendChart />
-          <RevenueByModalityChart />
-        </div>
-        
-        <div className="grid grid-cols-1 gap-6">
-          <ClassOccupancyChart />
-        </div>
-      </div>
-
-      {/* Tabelas de Dados */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Informações Recentes</h2>
-          <p className="text-sm text-muted-foreground">
-            Dados e atividades mais recentes
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RecentPaymentsTable />
-          <BirthdaysTable />
-        </div>
-      </div>
-
-      {/* Cards informativos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="dance-shadow">
-          <CardHeader>
-            <CardTitle>Como Navegar</CardTitle>
-            <CardDescription>
-              Use o menu lateral ou os cards de ação rápida acima para navegar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Três formas de navegar:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li><strong>Ações Rápidas:</strong> Cards clicáveis acima</li>
-                <li><strong>Menu Lateral:</strong> Barra fixa à esquerda (desktop)</li>
-                <li><strong>Menu Mobile:</strong> Botão ☰ no canto superior esquerdo</li>
-                <li><strong>Breadcrumbs:</strong> Navegação contextual no topo</li>
-              </ul>
+      {/* Gráficos - Only for full mode */}
+      {mode === 'full' && (
+        <>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Relatórios e Análises</h2>
+              <p className="text-sm text-muted-foreground">
+                Dados em tempo real do sistema
+              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dance-shadow">
-          <CardHeader>
-            <CardTitle>Próximos Passos</CardTitle>
-            <CardDescription>
-              Para implementar os gráficos e dados dinâmicos conforme planejado.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Em Desenvolvimento:</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Gráfico de evolução de matrículas</li>
-                <li>Gráfico de receita por modalidade</li>
-                <li>Gráfico de ocupação das turmas</li>
-                <li>Tabela de últimos pagamentos</li>
-                <li>Lista de aniversariantes do mês</li>
-              </ul>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <EnrollmentTrendChart />
+              <RevenueByModalityChart />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            
+            <div className="grid grid-cols-1 gap-6">
+              <ClassOccupancyChart />
+            </div>
+          </div>
+
+          {/* Tabelas de Dados */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Informações Recentes</h2>
+              <p className="text-sm text-muted-foreground">
+                Dados e atividades mais recentes
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <RecentPaymentsTable />
+              <BirthdaysTable />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Info Cards - Only for simple mode */}
+      {mode === 'simple' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="dance-shadow">
+            <CardHeader>
+              <CardTitle>Como Navegar</CardTitle>
+              <CardDescription>
+                Use o menu lateral ou os cards de ação rápida acima para navegar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Três formas de navegar:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li><strong>Ações Rápidas:</strong> Cards clicáveis acima</li>
+                  <li><strong>Menu Lateral:</strong> Barra fixa à esquerda (desktop)</li>
+                  <li><strong>Menu Mobile:</strong> Botão ☰ no canto superior esquerdo</li>
+                  <li><strong>Breadcrumbs:</strong> Navegação contextual no topo</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="dance-shadow">
+            <CardHeader>
+              <CardTitle>Status do Sistema</CardTitle>
+              <CardDescription>
+                Dashboard simplificado para debug de problemas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Versão Debug Ativa:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Gráficos temporariamente desabilitados</li>
+                  <li>Queries complexas removidas</li>
+                  <li>Error boundary ativo</li>
+                  <li>Sistema funcionando em modo simples</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

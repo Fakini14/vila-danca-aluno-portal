@@ -24,13 +24,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Palette } from 'lucide-react';
 
@@ -38,7 +31,6 @@ const formSchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres').max(255, 'Nome muito longo'),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Cor deve estar no formato hexadecimal (#RRGGBB)'),
   description: z.string().max(500, 'Descrição muito longa').optional(),
-  nivel: z.enum(['basico', 'intermediario', 'avancado']),
   active: z.boolean().default(true),
 });
 
@@ -49,7 +41,6 @@ interface ClassType {
   name: string;
   color: string;
   description: string | null;
-  nivel: 'basico' | 'intermediario' | 'avancado';
   active: boolean;
 }
 
@@ -70,7 +61,6 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
       name: '',
       color: '#6366F1',
       description: '',
-      nivel: 'basico',
       active: true,
     },
   });
@@ -81,7 +71,6 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
         name: classType.name,
         color: classType.color,
         description: classType.description || '',
-        nivel: classType.nivel,
         active: classType.active,
       });
     } else {
@@ -89,7 +78,6 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
         name: '',
         color: '#6366F1',
         description: '',
-        nivel: 'basico',
         active: true,
       });
     }
@@ -241,31 +229,6 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="nivel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nível</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o nível" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="basico">Básico</SelectItem>
-                      <SelectItem value="intermediario">Intermediário</SelectItem>
-                      <SelectItem value="avancado">Avançado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Nível de dificuldade da modalidade
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

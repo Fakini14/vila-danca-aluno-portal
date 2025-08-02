@@ -53,7 +53,7 @@ serve(async (req) => {
       postalCode: '00000000'
     }
 
-    let customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
+    const customerResponse = await fetch('https://www.asaas.com/api/v3/customers', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

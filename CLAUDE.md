@@ -49,8 +49,9 @@ The project is in active development with the following modules already implemen
 - `supabase migration new migration-name` - Create new migration
 - MCP Server configured for Supabase operations (see `.mcp.json`)
 
-### Test Running
-**Note**: No test framework is currently configured. When implementing tests, install a test runner like Vitest or Jest.
+### Type Checking & Testing
+- TypeScript checking is automatically enforced via hooks (see `.claude/hooks/tsc.js`)
+- **Note**: No test framework is currently configured. When implementing tests, install a test runner like Vitest or Jest.
 
 ## Architecture Overview
 

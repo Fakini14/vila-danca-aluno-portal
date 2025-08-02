@@ -100,7 +100,6 @@ export type Database = {
           description: string | null
           id: string
           name: string
-          nivel: Database["public"]["Enums"]["nivel_turma"]
           updated_at: string | null
         }
         Insert: {
@@ -110,7 +109,6 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
-          nivel?: Database["public"]["Enums"]["nivel_turma"]
           updated_at?: string | null
         }
         Update: {
@@ -120,7 +118,6 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
-          nivel?: Database["public"]["Enums"]["nivel_turma"]
           updated_at?: string | null
         }
         Relationships: []
@@ -416,6 +413,7 @@ export type Database = {
       }
       students: {
         Row: {
+          auth_status: string
           created_at: string
           data_nascimento: string | null
           endereco_completo: string | null
@@ -428,6 +426,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_status?: string
           created_at?: string
           data_nascimento?: string | null
           endereco_completo?: string | null
@@ -440,6 +439,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auth_status?: string
           created_at?: string
           data_nascimento?: string | null
           endereco_completo?: string | null
@@ -473,6 +473,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_student_record: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]

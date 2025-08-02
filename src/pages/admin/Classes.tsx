@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   BookOpen, 
   Search, 
@@ -20,7 +19,8 @@ import {
   Calendar,
   DollarSign,
   Grid3X3,
-  List
+  List,
+  Palette,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,12 +40,6 @@ import { useToast } from '@/hooks/use-toast';
 // import { format } from 'date-fns';
 // import { ptBR } from 'date-fns/locale';
 
-interface ClassType {
-  id: string;
-  name: string;
-  color: string;
-  nivel: 'basico' | 'intermediario' | 'avancado';
-}
 
 interface Teacher {
   id: string;
@@ -71,7 +65,6 @@ interface Class {
   created_at: string;
   tipo: 'regular' | 'workshop' | 'particular' | 'outra';
   professor?: Teacher;
-  class_type?: ClassType;
   _count?: {
     enrollments: number;
   };
@@ -129,16 +122,9 @@ const useClasses = (searchTerm: string, modalityFilter: string, teacherFilter: s
 
       if (typesError) throw typesError;
 
-      // Map class types by name for easy lookup
-      const classTypeMap = classTypes.reduce((acc: Record<string, ClassType>, type) => {
-        acc[type.name] = type;
-        return acc;
-      }, {});
-
       // Combine data and filter by day if needed
       let combinedData = (classesData || []).map((cls: any) => ({
         ...cls,
-        class_type: classTypeMap[cls.modalidade],
         _count: {
           enrollments: cls.enrollments?.[0]?.count || 0
         }
@@ -193,6 +179,7 @@ const useClassTypes = () => {
   });
 };
 
+
 export default function Classes() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,7 +189,9 @@ export default function Classes() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showForm, setShowForm] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: classes, isLoading, error, refetch } = useClasses(searchTerm, modalityFilter, teacherFilter, dayFilter);
   const { data: teachers } = useTeachers();
@@ -233,6 +222,7 @@ export default function Classes() {
       });
     }
   };
+
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -287,17 +277,24 @@ export default function Classes() {
             Gerencie as turmas e horários da escola
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => navigate('/admin/classes/new')} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Turma
-          </Button>
-          <Button onClick={() => setShowForm(true)} variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Criar Rápido
-          </Button>
-        </div>
       </div>
+
+      <div className="space-y-6">
+          {/* Header Actions for Classes */}
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => navigate('/admin/class-types')} variant="outline" className="gap-2">
+              <Palette className="h-4 w-4" />
+              Modalidades
+            </Button>
+            <Button onClick={() => navigate('/admin/classes/new')} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Turma
+            </Button>
+            <Button onClick={() => setShowForm(true)} variant="outline" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Criar Rápido
+            </Button>
+          </div>
 
       {/* Filtros */}
       <Card>
@@ -390,10 +387,9 @@ export default function Classes() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div 
-                      className="p-3 rounded-lg"
-                      style={{ backgroundColor: turma.class_type?.color ? turma.class_type.color + '20' : '#6366F120' }}
+                      className="p-3 rounded-lg bg-primary/10"
                     >
-                      <BookOpen className="h-6 w-6" style={{ color: turma.class_type?.color || '#6366F1' }} />
+                      <BookOpen className="h-6 w-6 text-primary" />
                     </div>
                     <div>
                       <CardTitle className="text-lg">
@@ -523,7 +519,9 @@ export default function Classes() {
         </Card>
       )}
 
-      {/* Modal de Formulário */}
+      </div>
+
+      {/* Modal de Formulário para Classes */}
       <ClassFormModal
         open={showForm}
         onClose={() => {
@@ -537,6 +535,7 @@ export default function Classes() {
           setSelectedClass(null);
         }}
       />
+
     </div>
   );
 }

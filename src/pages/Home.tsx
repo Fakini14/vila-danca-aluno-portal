@@ -104,17 +104,10 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="outline" asChild className="hidden sm:flex">
+              <Button asChild className="dance-gradient hover:scale-105 transition-transform">
                 <Link to="/auth">
                   <LogIn className="h-4 w-4 mr-2" />
                   Login
-                </Link>
-              </Button>
-              <Button asChild className="dance-gradient hover:scale-105 transition-transform">
-                <Link to="/auth">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Cadastre-se</span>
-                  <span className="sm:hidden">Entrar</span>
                 </Link>
               </Button>
             </div>
@@ -123,34 +116,34 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-24 overflow-hidden">
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-primary/4 to-transparent"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
         
         {/* Decorative elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-30 animate-pulse delay-1000"></div>
+        <div className="absolute top-20 left-10 w-80 h-80 bg-primary/15 rounded-full blur-3xl opacity-25 animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/8 rounded-full blur-3xl opacity-35 animate-pulse delay-1000"></div>
         
-        <div className="relative container mx-auto px-4 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 dance-text-gradient leading-tight">
+        <div className="relative container mx-auto px-6 text-center">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-5xl md:text-7xl font-bold mb-8 dance-text-gradient leading-tight tracking-tight">
               Transforme sua vida através da dança
             </h2>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed font-light">
               Oferecemos uma variedade de modalidades de dança para todos os níveis. 
-              Venha fazer parte da nossa família e descubra a magia do movimento!
+              Descubra a magia do movimento em um ambiente acolhedor e profissional!
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button size="lg" asChild className="dance-gradient hover:scale-105 transition-all duration-300 text-lg px-8 py-6 dance-shadow">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Button size="lg" asChild className="dance-gradient hover:scale-105 transition-all duration-300 text-lg px-10 py-7 dance-shadow rounded-xl">
                 <Link to="/auth">
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Comece Agora
+                  <LogIn className="h-5 w-5 mr-3" />
+                  Acessar Portal
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" asChild className="text-lg px-8 py-6 hover:bg-primary/10 transition-colors">
+              <Button variant="outline" size="lg" asChild className="text-lg px-10 py-7 hover:bg-primary/10 transition-all duration-300 rounded-xl border-2">
                 <Link to="#turmas">
-                  Ver Turmas
+                  Ver Turmas Disponíveis
                 </Link>
               </Button>
             </div>
@@ -159,11 +152,11 @@ export default function Home() {
       </section>
 
       {/* Classes Section */}
-      <section id="turmas" className="py-20 bg-gradient-to-b from-background to-muted/20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h3 className="text-4xl md:text-5xl font-bold mb-6 dance-text-gradient">Nossas Turmas Ativas</h3>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+      <section id="turmas" className="py-24 bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+            <h3 className="text-4xl md:text-6xl font-bold mb-8 dance-text-gradient tracking-tight">Nossas Turmas Ativas</h3>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-light">
               Conheça as modalidades disponíveis e encontre a perfeita para você. 
               Cada turma é cuidadosamente preparada para proporcionar a melhor experiência.
             </p>
@@ -184,9 +177,9 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
               {classes.map((classItem) => (
-                <Card key={classItem.id} className="group relative overflow-hidden border-0 dance-shadow hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-gradient-to-br from-card to-card/50">
+                <Card key={classItem.id} className="group relative overflow-hidden border-0 dance-shadow hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 bg-gradient-to-br from-card to-card/80 rounded-2xl">
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   
@@ -249,16 +242,23 @@ export default function Home() {
           )}
 
           <div className="text-center mt-16">
-            <div className="max-w-md mx-auto">
-              <p className="text-muted-foreground mb-6 text-lg">
-                Pronto para começar sua jornada na dança?
-              </p>
-              <Button size="lg" asChild className="dance-gradient hover:scale-105 transition-all duration-300 text-lg px-8 py-6 dance-shadow">
-                <Link to="/auth">
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Cadastre-se como Aluno
-                </Link>
-              </Button>
+            <div className="max-w-lg mx-auto">
+              <div className="p-8 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <h4 className="text-2xl font-bold mb-4 dance-text-gradient">
+                  Interessado em se inscrever?
+                </h4>
+                <p className="text-muted-foreground mb-6 text-lg leading-relaxed">
+                  Entre em contato conosco para mais informações sobre matrículas, horários e valores. Nossa equipe está pronta para ajudar você a encontrar a modalidade perfeita!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button variant="outline" size="lg" className="text-lg px-6 py-3">
+                    <span className="font-medium">📞 Contato</span>
+                  </Button>
+                  <Button variant="outline" size="lg" className="text-lg px-6 py-3">
+                    <span className="font-medium">📧 WhatsApp</span>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

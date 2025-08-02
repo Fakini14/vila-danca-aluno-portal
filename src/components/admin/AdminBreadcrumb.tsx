@@ -15,7 +15,8 @@ import {
   DollarSign,
   Calendar,
   BarChart3,
-  Settings
+  Settings,
+  Palette
 } from 'lucide-react';
 
 const breadcrumbMap: Record<string, { label: string; icon?: any }> = {
@@ -24,6 +25,7 @@ const breadcrumbMap: Record<string, { label: string; icon?: any }> = {
   '/admin/students': { label: 'Alunos', icon: Users },
   '/admin/teachers': { label: 'Professores', icon: GraduationCap },
   '/admin/classes': { label: 'Turmas', icon: BookOpen },
+  '/admin/class-types': { label: 'Modalidades', icon: Palette },
   '/admin/finance': { label: 'Financeiro', icon: DollarSign },
   '/admin/events': { label: 'Eventos', icon: Calendar },
   '/admin/reports': { label: 'Relatórios', icon: BarChart3 },
