@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +19,7 @@ import {
   Grid3X3,
   List,
   Palette,
+  Eye,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,10 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
+import { useClasses, useDeleteClass } from '@/hooks/useClasses';
 import { ClassFormModal } from '@/components/admin/forms/ClassFormModal';
 import { useToast } from '@/hooks/use-toast';
-// import { format } from 'date-fns';
-// import { ptBR } from 'date-fns/locale';
 
 
 interface Teacher {
@@ -48,7 +47,7 @@ interface Teacher {
   };
 }
 
-interface Class {
+interface ClassData {
   id: string;
   nome: string | null;
   modalidade: string;
@@ -80,104 +79,6 @@ const diasSemana = [
   { value: 'domingo', label: 'Domingo' },
 ];
 
-const useClasses = (searchTerm: string, modalityFilter: string, teacherFilter: string, dayFilter: string) => {
-  return useQuery({
-    queryKey: ['classes', searchTerm, modalityFilter, teacherFilter, dayFilter],
-    queryFn: async (): Promise<Class[]> => {
-      // Fetch classes with related data
-      let query = supabase
-        .from('classes')
-        .select(`
-          *,
-          professor:staff!classes_professor_principal_id_fkey(
-            id,
-            profiles!staff_id_fkey(
-              nome_completo
-            )
-          ),
-          enrollments(count)
-        `)
-        .order('horario_inicio');
-
-      if (searchTerm) {
-        query = query.or(`nome.ilike.%${searchTerm}%,modalidade.ilike.%${searchTerm}%`);
-      }
-
-      if (modalityFilter && modalityFilter !== 'all') {
-        query = query.eq('modalidade', modalityFilter);
-      }
-
-      if (teacherFilter && teacherFilter !== 'all') {
-        query = query.eq('professor_principal_id', teacherFilter);
-      }
-
-      const { data: classesData, error: classesError } = await query;
-
-      if (classesError) throw classesError;
-
-      // Fetch class types separately
-      const { data: classTypes, error: typesError } = await supabase
-        .from('class_types')
-        .select('*');
-
-      if (typesError) throw typesError;
-
-      // Combine data and filter by day if needed
-      let combinedData = (classesData || []).map((cls: any) => ({
-        ...cls,
-        _count: {
-          enrollments: cls.enrollments?.[0]?.count || 0
-        }
-      }));
-
-      // Filter by day
-      if (dayFilter && dayFilter !== 'all') {
-        combinedData = combinedData.filter((cls: Class) => 
-          cls.dias_semana.includes(dayFilter)
-        );
-      }
-
-      return combinedData;
-    },
-  });
-};
-
-const useTeachers = () => {
-  return useQuery({
-    queryKey: ['teachers-list'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('staff')
-        .select(`
-          id,
-          profiles!inner(
-            nome_completo
-          )
-        `)
-        .eq('funcao', 'professor')
-        .order('profiles(nome_completo)');
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-};
-
-const useClassTypes = () => {
-  return useQuery({
-    queryKey: ['class-types-list'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('class_types')
-        .select('*')
-        .eq('active', true)
-        .order('name');
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-};
 
 
 export default function Classes() {
@@ -186,40 +87,40 @@ export default function Classes() {
   const [modalityFilter, setModalityFilter] = useState('all');
   const [teacherFilter, setTeacherFilter] = useState('all');
   const [dayFilter, setDayFilter] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [showForm, setShowForm] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [selectedClass, setSelectedClass] = useState<ClassData | null>(null);
   
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  
+  const { data: classes = [], isLoading, error } = useClasses();
+  const deleteClass = useDeleteClass();
 
-  const { data: classes, isLoading, error, refetch } = useClasses(searchTerm, modalityFilter, teacherFilter, dayFilter);
-  const { data: teachers } = useTeachers();
-  const { data: classTypes } = useClassTypes();
+  // Filter classes based on search and filters
+  const filteredClasses = classes.filter(cls => {
+    const matchesSearch = !searchTerm || 
+      cls.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cls.modalidade.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesModality = modalityFilter === 'all' || cls.modalidade === modalityFilter;
+    const matchesTeacher = teacherFilter === 'all' || cls.professor_principal_id === teacherFilter;
+    const matchesDay = dayFilter === 'all' || cls.dias_semana.includes(dayFilter);
+    
+    return matchesSearch && matchesModality && matchesTeacher && matchesDay;
+  });
 
-  const handleDelete = async (classId: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta turma?')) return;
+  const handleViewClass = (classData: ClassData) => {
+    navigate(`/admin/classes/${classData.id}`);
+  };
 
-    try {
-      const { error } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', classId);
+  const handleEditClass = (classData: ClassData) => {
+    setSelectedClass(classData);
+    setShowForm(true);
+  };
 
-      if (error) throw error;
-
-      toast({
-        title: "Turma excluída",
-        description: "Turma removida com sucesso",
-      });
-      
-      refetch();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao excluir turma",
-        description: error.message,
-        variant: "destructive",
-      });
+  const handleDeleteClass = (classData: ClassData) => {
+    if (confirm('Tem certeza que deseja excluir esta turma?')) {
+      deleteClass.mutate(classData.id);
     }
   };
 
@@ -238,6 +139,119 @@ export default function Classes() {
   const getDayLabel = (day: string) => {
     return diasSemana.find(d => d.value === day)?.label || day;
   };
+
+  // Define table columns for DataTable
+  const columns: Column<ClassData>[] = [
+    {
+      key: 'nome',
+      title: 'Turma',
+      render: (value, classData) => (
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <BookOpen className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium">
+              {value || `${classData.modalidade} - ${classData.nivel}`}
+            </p>
+            <p className="text-sm text-muted-foreground">{classData.modalidade}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'professor',
+      title: 'Professor',
+      render: (value, classData) => (
+        <div className="text-sm">
+          {classData.professor?.profiles?.nome_completo || 'Não atribuído'}
+        </div>
+      )
+    },
+    {
+      key: 'dias_semana',
+      title: 'Dias',
+      render: (value) => (
+        <div className="flex flex-wrap gap-1">
+          {value.slice(0, 2).map((dia: string, index: number) => (
+            <Badge key={index} variant="secondary" className="text-xs">
+              {getDayLabel(dia)}
+            </Badge>
+          ))}
+          {value.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{value.length - 2}
+            </Badge>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'horario_inicio',
+      title: 'Horário',
+      render: (value, classData) => (
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <span>{formatTime(value)} - {formatTime(classData.horario_fim)}</span>
+        </div>
+      )
+    },
+    {
+      key: '_count',
+      title: 'Alunos',
+      render: (value, classData) => (
+        <div className="flex items-center gap-2 text-sm">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span>{value?.enrollments || 0}/{classData.capacidade_maxima || '∞'}</span>
+        </div>
+      )
+    },
+    {
+      key: 'valor_aula',
+      title: 'Valor',
+      render: (value) => (
+        <div className="flex items-center gap-2 text-sm">
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <span>{formatCurrency(value)}</span>
+        </div>
+      )
+    },
+    {
+      key: 'ativa',
+      title: 'Status',
+      render: (value) => (
+        <StatusBadge 
+          status={value ? 'Ativa' : 'Inativa'}
+          variant={value ? 'default' : 'secondary'}
+        />
+      )
+    }
+  ];
+
+  // Define table actions
+  const actions: ActionButton<ClassData>[] = [
+    {
+      label: 'Visualizar',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: handleViewClass
+    },
+    {
+      label: 'Editar',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: handleEditClass
+    },
+    {
+      label: 'Excluir',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: handleDeleteClass,
+      variant: 'destructive'
+    }
+  ];
+
+  // Calculate statistics
+  const activeClasses = classes.filter(c => c.ativa).length;
+  const totalEnrollments = classes.reduce((sum, c) => sum + (c._count?.enrollments || 0), 0);
+  const uniqueModalities = new Set(classes.map(c => c.modalidade)).size;
 
   if (isLoading) {
     return (
@@ -279,6 +293,48 @@ export default function Classes() {
         </div>
       </div>
 
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Turmas</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{classes.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {activeClasses} ativas
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Alunos</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalEnrollments}</div>
+            <p className="text-xs text-muted-foreground">
+              matriculados nas turmas
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Modalidades</CardTitle>
+            <Palette className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{uniqueModalities}</div>
+            <p className="text-xs text-muted-foreground">
+              modalidades oferecidas
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="space-y-6">
           {/* Header Actions for Classes */}
           <div className="flex justify-end gap-2">
@@ -303,18 +359,18 @@ export default function Classes() {
             <CardTitle className="text-lg">Filtros</CardTitle>
             <div className="flex gap-2">
               <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
               >
                 <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                <List className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -339,9 +395,9 @@ export default function Classes() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas modalidades</SelectItem>
-                {classTypes?.map((type) => (
-                  <SelectItem key={type.id} value={type.name}>
-                    {type.name}
+                {Array.from(new Set(classes.map(c => c.modalidade))).map((modality) => (
+                  <SelectItem key={modality} value={modality}>
+                    {modality}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -353,9 +409,12 @@ export default function Classes() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos professores</SelectItem>
-                {teachers?.map((teacher: any) => (
+                {Array.from(new Set(classes.filter(c => c.professor).map(c => ({ 
+                  id: c.professor_principal_id, 
+                  nome: c.professor?.profiles?.nome_completo 
+                })))).map((teacher: any) => (
                   <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.profiles.nome_completo}
+                    {teacher.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -379,9 +438,51 @@ export default function Classes() {
       </Card>
 
       {/* Lista de Turmas */}
-      {viewMode === 'list' ? (
+      {viewMode === 'table' ? (
+        <DataTable
+          data={filteredClasses}
+          columns={columns}
+          actions={actions}
+          title="Lista de Turmas"
+          description="Gerencie as turmas e horários da escola"
+          searchPlaceholder="Buscar por nome ou modalidade..."
+          isLoading={isLoading}
+          emptyMessage="Nenhuma turma cadastrada"
+          renderFilters={() => (
+            <>
+              <Select value={modalityFilter} onValueChange={setModalityFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Modalidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas modalidades</SelectItem>
+                  {Array.from(new Set(classes.map(c => c.modalidade))).map((modality) => (
+                    <SelectItem key={modality} value={modality}>
+                      {modality}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={dayFilter} onValueChange={setDayFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Dia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os dias</SelectItem>
+                  {diasSemana.map((dia) => (
+                    <SelectItem key={dia.value} value={dia.value}>
+                      {dia.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+        />
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {classes?.map((turma) => (
+          {filteredClasses?.map((turma) => (
             <Card key={turma.id} className="dance-shadow hover:shadow-lg transition-all duration-200">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -412,15 +513,12 @@ export default function Classes() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {
-                        setSelectedClass(turma);
-                        setShowForm(true);
-                      }}>
+                      <DropdownMenuItem onClick={() => handleEditClass(turma)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => handleDelete(turma.id)}
+                        onClick={() => handleDeleteClass(turma)}
                         className="text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -485,17 +583,25 @@ export default function Classes() {
             </Card>
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* Grid view disabled for now - only table and card views */}
+
+      {/* Empty State */}
+      {filteredClasses && filteredClasses.length === 0 && classes.length > 0 && (
         <Card>
-          <CardContent className="p-6">
-            <div className="text-center text-muted-foreground">
-              Grade semanal em desenvolvimento...
+          <CardContent className="flex flex-col items-center justify-center h-64 space-y-4">
+            <BookOpen className="h-12 w-12 text-muted-foreground" />
+            <div className="text-center">
+              <h3 className="text-lg font-medium">Nenhuma turma encontrada</h3>
+              <p className="text-muted-foreground">
+                Tente ajustar os filtros de busca
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Empty State */}
+      
       {classes && classes.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center h-64 space-y-4">
@@ -530,7 +636,6 @@ export default function Classes() {
         }}
         classData={selectedClass}
         onSuccess={() => {
-          refetch();
           setShowForm(false);
           setSelectedClass(null);
         }}
