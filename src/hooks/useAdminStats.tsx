@@ -13,57 +13,125 @@ export const useAdminStats = () => {
   return useQuery({
     queryKey: ['admin-stats'],
     queryFn: async (): Promise<AdminStats> => {
-      const today = new Date();
-      const startOfCurrentMonth = startOfMonth(today);
-      const endOfCurrentMonth = endOfMonth(today);
+      console.log('🔄 Iniciando busca de estatísticas admin...');
       
-      // Total de alunos ativos
-      const { count: totalActiveStudents } = await supabase
-        .from('enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('ativa', true);
+      try {
+        const today = new Date();
+        const startOfCurrentMonth = startOfMonth(today);
+        const endOfCurrentMonth = endOfMonth(today);
+        
+        let totalActiveStudents = 0;
+        let monthRevenue = 0;
+        let defaultRate = 0;
+        let classesToday = 0;
 
-      // Receita do mês (pagamentos confirmados)
-      const { data: monthPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'paid')
-        .gte('paid_date', startOfCurrentMonth.toISOString())
-        .lte('paid_date', endOfCurrentMonth.toISOString());
+        // Total de alunos ativos - com tratamento de erro
+        try {
+          console.log('📊 Buscando total de alunos ativos...');
+          const { count, error: enrollmentError } = await supabase
+            .from('enrollments')
+            .select('*', { count: 'exact', head: true })
+            .eq('ativa', true);
 
-      const monthRevenue = monthPayments?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
+          if (enrollmentError) {
+            console.error('❌ Erro ao buscar enrollments:', enrollmentError);
+          } else {
+            totalActiveStudents = count || 0;
+            console.log('✅ Total de alunos ativos:', totalActiveStudents);
+          }
+        } catch (error) {
+          console.error('❌ Erro capturado ao buscar enrollments:', error);
+        }
 
-      // Taxa de inadimplência (pagamentos vencidos não pagos)
-      const { count: totalDuePayments } = await supabase
-        .from('payments')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .lt('due_date', today.toISOString());
+        // Receita do mês - com tratamento de erro
+        try {
+          console.log('💰 Buscando receita do mês...');
+          const { data: monthPayments, error: paymentsError } = await supabase
+            .from('payments')
+            .select('amount')
+            .eq('status', 'pago')
+            .gte('paid_date', format(startOfCurrentMonth, 'yyyy-MM-dd'))
+            .lte('paid_date', format(endOfCurrentMonth, 'yyyy-MM-dd'));
 
-      const { count: totalPayments } = await supabase
-        .from('payments')
-        .select('*', { count: 'exact', head: true });
+          if (paymentsError) {
+            console.error('❌ Erro ao buscar payments:', paymentsError);
+          } else {
+            monthRevenue = monthPayments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
+            console.log('✅ Receita do mês:', monthRevenue);
+          }
+        } catch (error) {
+          console.error('❌ Erro capturado ao buscar payments:', error);
+        }
 
-      const defaultRate = totalPayments ? ((totalDuePayments || 0) / totalPayments) * 100 : 0;
+        // Taxa de inadimplência - com tratamento de erro
+        try {
+          console.log('⚠️ Calculando taxa de inadimplência...');
+          const { count: totalDuePayments, error: dueError } = await supabase
+            .from('payments')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pendente')
+            .lt('due_date', format(today, 'yyyy-MM-dd'));
 
-      // Aulas hoje (baseado nos dias da semana)
-      const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, etc.
-      const weekDays = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-      const todayName = weekDays[dayOfWeek];
+          const { count: totalPayments, error: totalError } = await supabase
+            .from('payments')
+            .select('*', { count: 'exact', head: true });
 
-      const { count: classesToday } = await supabase
-        .from('classes')
-        .select('*', { count: 'exact', head: true })
-        .eq('ativa', true)
-        .contains('dias_semana', [todayName]);
+          if (dueError || totalError) {
+            console.error('❌ Erro ao calcular inadimplência:', { dueError, totalError });
+          } else {
+            defaultRate = totalPayments ? ((totalDuePayments || 0) / totalPayments) * 100 : 0;
+            console.log('✅ Taxa de inadimplência:', defaultRate);
+          }
+        } catch (error) {
+          console.error('❌ Erro capturado ao calcular inadimplência:', error);
+        }
 
-      return {
-        totalActiveStudents: totalActiveStudents || 0,
-        monthRevenue,
-        defaultRate,
-        classesToday: classesToday || 0,
-      };
+        // Aulas hoje - com tratamento de erro
+        try {
+          console.log('📚 Buscando aulas de hoje...');
+          const dayOfWeek = today.getDay();
+          const weekDays = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+          const todayName = weekDays[dayOfWeek];
+
+          const { count, error: classesError } = await supabase
+            .from('classes')
+            .select('*', { count: 'exact', head: true })
+            .eq('ativa', true)
+            .contains('dias_semana', [todayName]);
+
+          if (classesError) {
+            console.error('❌ Erro ao buscar classes:', classesError);
+          } else {
+            classesToday = count || 0;
+            console.log('✅ Aulas hoje:', classesToday);
+          }
+        } catch (error) {
+          console.error('❌ Erro capturado ao buscar classes:', error);
+        }
+
+        const result = {
+          totalActiveStudents,
+          monthRevenue,
+          defaultRate,
+          classesToday,
+        };
+
+        console.log('✅ Estatísticas finais:', result);
+        return result;
+
+      } catch (error) {
+        console.error('❌ Erro geral ao buscar estatísticas:', error);
+        // Retornar valores padrão em caso de erro
+        return {
+          totalActiveStudents: 0,
+          monthRevenue: 0,
+          defaultRate: 0,
+          classesToday: 0,
+        };
+      }
     },
+    retry: 1,
+    retryDelay: 1000,
   });
 };
 
@@ -71,28 +139,50 @@ export const useEnrollmentTrend = () => {
   return useQuery({
     queryKey: ['enrollment-trend'],
     queryFn: async () => {
-      const monthsBack = 6;
-      const data = [];
+      console.log('📈 Iniciando busca de tendência de matrículas...');
       
-      for (let i = monthsBack - 1; i >= 0; i--) {
-        const date = subMonths(new Date(), i);
-        const monthStart = startOfMonth(date);
-        const monthEnd = endOfMonth(date);
+      try {
+        const monthsBack = 6;
+        const data = [];
         
-        const { count } = await supabase
-          .from('enrollments')
-          .select('*', { count: 'exact', head: true })
-          .gte('data_matricula', monthStart.toISOString())
-          .lte('data_matricula', monthEnd.toISOString());
+        for (let i = monthsBack - 1; i >= 0; i--) {
+          try {
+            const date = subMonths(new Date(), i);
+            const monthStart = startOfMonth(date);
+            const monthEnd = endOfMonth(date);
+            
+            const { count, error } = await supabase
+              .from('enrollments')
+              .select('*', { count: 'exact', head: true })
+              .gte('data_matricula', monthStart.toISOString())
+              .lte('data_matricula', monthEnd.toISOString());
+            
+            if (error) {
+              console.error(`❌ Erro ao buscar matrículas do mês ${format(date, 'MMM/yy')}:`, error);
+            }
+            
+            data.push({
+              month: format(date, 'MMM/yy'),
+              matriculas: count || 0,
+            });
+          } catch (error) {
+            console.error(`❌ Erro capturado no mês ${i}:`, error);
+            data.push({
+              month: format(subMonths(new Date(), i), 'MMM/yy'),
+              matriculas: 0,
+            });
+          }
+        }
         
-        data.push({
-          month: format(date, 'MMM/yy'),
-          matriculas: count || 0,
-        });
+        console.log('✅ Dados de tendência:', data);
+        return data;
+      } catch (error) {
+        console.error('❌ Erro geral na tendência de matrículas:', error);
+        return [];
       }
-      
-      return data;
     },
+    retry: 1,
+    retryDelay: 1000,
   });
 };
 

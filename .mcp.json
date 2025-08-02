@@ -10,6 +10,12 @@
         "env": {
           "SUPABASE_ACCESS_TOKEN": "sbp_bce6a5675f5821185713ec5a3f38699580599a41"
         }
-      }
+      },
+      "playwright": {
+            "command": "npx",
+            "args": [
+              "@playwright/mcp@latest"
+            ]
+          }
     }
   }
