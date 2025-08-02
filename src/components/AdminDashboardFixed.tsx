@@ -66,10 +66,10 @@ export function AdminDashboardFixed() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold dance-text-gradient">
+          <h1 className="text-3xl font-bold dance-text-gradient mb-2">
             Dashboard Administrativo
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             Bem-vindo de volta, {profile?.nome_completo || 'Administrador'}
           </p>
         </div>

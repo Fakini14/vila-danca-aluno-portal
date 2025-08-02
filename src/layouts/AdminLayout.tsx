@@ -20,15 +20,13 @@ import {
   DollarSign,
   Calendar,
   BarChart3,
-  Settings,
-  Palette
+  Settings
 } from 'lucide-react';
 
 const menuItems = [
   { icon: Home, label: 'Dashboard', path: '/admin/dashboard' },
   { icon: Users, label: 'Alunos', path: '/admin/students' },
   { icon: GraduationCap, label: 'Professores', path: '/admin/teachers' },
-  { icon: Palette, label: 'Modalidades', path: '/admin/class-types' },
   { icon: BookOpen, label: 'Turmas', path: '/admin/classes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/finance' },
   { icon: Calendar, label: 'Eventos', path: '/admin/events' },
@@ -41,6 +39,9 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Verificar se está na página do dashboard para ocultar subtitle
+  const isDashboardPage = location.pathname === '/admin/dashboard';
 
   const getInitials = (name: string) => {
     return name
@@ -126,14 +127,14 @@ export default function AdminLayout() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="flex items-center justify-between px-4 h-16">
-          {/* Menu trigger (both mobile and desktop) */}
+          {/* Menu trigger (mobile only) */}
           <div className="flex items-center space-x-4">
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="hover:bg-accent"
+                  className="md:hidden hover:bg-accent"
                   title="Menu de navegação"
                 >
                   <Menu className="h-6 w-6" />
@@ -153,9 +154,11 @@ export default function AdminLayout() {
                 <h1 className="font-bold dance-text-gradient text-lg">
                   Vila Dança & Arte
                 </h1>
-                <p className="text-xs text-muted-foreground">
-                  Painel Administrativo
-                </p>
+                {!isDashboardPage && (
+                  <p className="text-xs text-muted-foreground">
+                    Painel Administrativo
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -226,9 +229,11 @@ export default function AdminLayout() {
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           <div className="container mx-auto px-4 py-8">
-            <div className="mb-6">
-              <AdminBreadcrumb />
-            </div>
+            {!isDashboardPage && (
+              <div className="mb-6">
+                <AdminBreadcrumb />
+              </div>
+            )}
             <Outlet />
           </div>
         </main>
