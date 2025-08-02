@@ -10,7 +10,8 @@ const useRecentPayments = () => {
   return useQuery({
     queryKey: ['recent-payments'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get payments with enrollment and student IDs
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select(`
           id,
@@ -19,23 +20,67 @@ const useRecentPayments = () => {
           paid_date,
           due_date,
           payment_method,
-          enrollments (
-            students (
-              profiles (
-                nome_completo
-              )
-            ),
-            classes (
-              nome,
-              modalidade
-            )
-          )
+          enrollment_id,
+          student_id
         `)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
-      return data;
+      if (paymentsError) throw paymentsError;
+      if (!paymentsData || paymentsData.length === 0) return [];
+
+      // Get unique enrollment and student IDs
+      const enrollmentIds = [...new Set(paymentsData.map(p => p.enrollment_id).filter(Boolean))];
+      const studentIds = [...new Set(paymentsData.map(p => p.student_id).filter(Boolean))];
+
+      // Fetch enrollment data with class information
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from('enrollments')
+        .select(`
+          id,
+          class_id,
+          student_id,
+          classes (
+            nome,
+            modalidade
+          )
+        `)
+        .in('id', enrollmentIds);
+
+      if (enrollmentsError) throw enrollmentsError;
+
+      // Fetch student profile data
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select(`
+          id,
+          profiles (
+            nome_completo
+          )
+        `)
+        .in('id', studentIds);
+
+      if (studentsError) throw studentsError;
+
+      // Create lookup maps for efficient data joining
+      const enrollmentsMap = new Map(enrollmentsData?.map(e => [e.id, e]) || []);
+      const studentsMap = new Map(studentsData?.map(s => [s.id, s]) || []);
+
+      // Combine the data
+      return paymentsData.map(payment => {
+        const enrollment = enrollmentsMap.get(payment.enrollment_id);
+        const student = studentsMap.get(payment.student_id);
+        
+        return {
+          ...payment,
+          enrollment_data: enrollment ? {
+            classes: enrollment.classes
+          } : null,
+          student_data: student ? {
+            profiles: student.profiles
+          } : null
+        };
+      });
     },
   });
 };
@@ -45,12 +90,14 @@ export function RecentPaymentsTable() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
+      case 'pago':
         return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Pago</Badge>;
-      case 'pending':
+      case 'pendente':
         return <Badge variant="secondary">Pendente</Badge>;
-      case 'overdue':
+      case 'vencido':
         return <Badge variant="destructive">Vencido</Badge>;
+      case 'cancelado':
+        return <Badge variant="outline">Cancelado</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -121,9 +168,9 @@ export function RecentPaymentsTable() {
       <CardContent>
         <div className="space-y-4">
           {payments.map((payment) => {
-            const studentName = payment.enrollments?.students?.profiles?.nome_completo || 'N/A';
-            const className = payment.enrollments?.classes?.nome || 'N/A';
-            const modality = payment.enrollments?.classes?.modalidade || '';
+            const studentName = payment.student_data?.profiles?.nome_completo || 'N/A';
+            const className = payment.enrollment_data?.classes?.nome || 'N/A';
+            const modality = payment.enrollment_data?.classes?.modalidade || '';
 
             return (
               <div

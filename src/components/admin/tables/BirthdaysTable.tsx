@@ -209,14 +209,14 @@ export function BirthdaysTable() {
                     )}
                   </div>
                   <div>
-                    <p className="font-medium flex items-center gap-2">
+                    <div className="font-medium flex items-center gap-2">
                       {person.nome_completo}
                       {isToday(person.data_nascimento!) && (
                         <Badge variant="default" className="bg-pink-500 hover:bg-pink-600 text-xs">
                           HOJE!
                         </Badge>
                       )}
-                    </p>
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {classes.length > 0 ? classes.join(', ') : 'Sem turmas ativas'}
                     </p>

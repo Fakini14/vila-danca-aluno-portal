@@ -104,7 +104,7 @@ export function useTeacherCommissions(teacherId: string, month?: string, year?: 
             valor_aula,
             staff(taxa_comissao)
           ),
-          students(nome_completo)
+          students(profiles(nome_completo))
         `)
         .eq('classes.professor_principal_id', teacherId)
         .eq('presente', true);

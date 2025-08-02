@@ -34,7 +34,7 @@ export function useClasses() {
         .from('classes')
         .select(`
           *,
-          staff(nome_completo)
+          staff(profiles(nome_completo))
         `)
         .order('modalidade');
       
@@ -53,7 +53,7 @@ export function useActiveClasses() {
         .from('classes')
         .select(`
           *,
-          staff(nome_completo)
+          staff(profiles(nome_completo))
         `)
         .eq('ativa', true)
         .order('modalidade');
@@ -73,10 +73,10 @@ export function useClass(id: string) {
         .from('classes')
         .select(`
           *,
-          staff(nome_completo, email),
+          staff(profiles(nome_completo, email)),
           enrollments(
             *,
-            students(nome_completo, whatsapp)
+            students(profiles(nome_completo, whatsapp))
           )
         `)
         .eq('id', id)
@@ -133,7 +133,7 @@ export function useTodayClasses() {
         .from('classes')
         .select(`
           *,
-          staff(nome_completo)
+          staff(profiles(nome_completo))
         `)
         .contains('dias_semana', [dayMapping[today]])
         .eq('ativa', true)

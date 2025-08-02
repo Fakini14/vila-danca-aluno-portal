@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
-import { useClasses, useDeleteClass } from '@/hooks/useClasses';
+import { useClasses } from '@/hooks/useClasses';
 import { ClassFormModal } from '@/components/admin/forms/ClassFormModal';
 import { useToast } from '@/hooks/use-toast';
 
@@ -94,7 +95,6 @@ export default function Classes() {
   const { toast } = useToast();
   
   const { data: classes = [], isLoading, error } = useClasses();
-  const deleteClass = useDeleteClass();
 
   // Filter classes based on search and filters
   const filteredClasses = classes.filter(cls => {
@@ -118,9 +118,29 @@ export default function Classes() {
     setShowForm(true);
   };
 
-  const handleDeleteClass = (classData: ClassData) => {
-    if (confirm('Tem certeza que deseja excluir esta turma?')) {
-      deleteClass.mutate(classData.id);
+  const handleDeleteClass = async (classData: ClassData) => {
+    if (!confirm('Tem certeza que deseja excluir esta turma?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .delete()
+        .eq('id', classData.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Turma excluída",
+        description: "Turma removida com sucesso",
+      });
+      
+      // TODO: Refresh data here - could use React Query invalidation
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir turma",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
