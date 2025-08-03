@@ -1,4 +1,4 @@
-import { Users, GraduationCap, DollarSign, BookOpen, Calendar, BarChart3 } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, BookOpen, Calendar } from 'lucide-react';
 
 export const ADMIN_QUICK_ACTIONS = [
   { 
@@ -35,13 +35,6 @@ export const ADMIN_QUICK_ACTIONS = [
     description: 'Organizar eventos e apresentações',
     path: '/admin/events',
     color: 'text-orange-500'
-  },
-  { 
-    icon: BarChart3, 
-    title: 'Relatórios', 
-    description: 'Visualizar estatísticas e relatórios',
-    path: '/admin/reports',
-    color: 'text-indigo-500'
   }
 ];
 
@@ -60,21 +53,6 @@ export const TEACHER_MENU_ITEMS = [
     title: 'Estudantes',
     path: '/teacher/students',
     description: 'Lista de todos os estudantes'
-  },
-  {
-    title: 'Agenda',
-    path: '/teacher/schedule',
-    description: 'Horários e cronogramas'
-  },
-  {
-    title: 'Comissões',
-    path: '/teacher/commissions',
-    description: 'Acompanhar comissões'
-  },
-  {
-    title: 'Relatórios',
-    path: '/teacher/reports',
-    description: 'Relatórios de performance'
   }
 ];
 
@@ -113,7 +91,5 @@ export const ADMIN_SIDEBAR_ITEMS = [
   { title: 'Turmas', path: '/admin/classes' },
   { title: 'Modalidades', path: '/admin/class-types' },
   { title: 'Financeiro', path: '/admin/finance' },
-  { title: 'Eventos', path: '/admin/events' },
-  { title: 'Relatórios', path: '/admin/reports' },
-  { title: 'Configurações', path: '/admin/settings' }
+  { title: 'Eventos', path: '/admin/events' }
 ];

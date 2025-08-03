@@ -18,9 +18,7 @@ import {
   GraduationCap,
   BookOpen,
   DollarSign,
-  Calendar,
-  BarChart3,
-  Settings
+  Calendar
 } from 'lucide-react';
 
 const menuItems = [
@@ -29,9 +27,7 @@ const menuItems = [
   { icon: GraduationCap, label: 'Professores', path: '/admin/teachers' },
   { icon: BookOpen, label: 'Turmas', path: '/admin/classes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/finance' },
-  { icon: Calendar, label: 'Eventos', path: '/admin/events' },
-  { icon: BarChart3, label: 'Relatórios', path: '/admin/reports' },
-  { icon: Settings, label: 'Configurações', path: '/admin/settings' },
+  { icon: Calendar, label: 'Eventos', path: '/admin/events' }
 ];
 
 export default function AdminLayout() {

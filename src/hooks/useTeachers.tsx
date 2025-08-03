@@ -13,7 +13,7 @@ export interface Teacher {
     agencia: string;
     conta: string;
     tipo_conta: string;
-  };
+  } | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -27,7 +27,15 @@ export function useTeachers() {
       const { data, error } = await supabase
         .from('staff')
         .select(`
-          *,
+          id,
+          profile_id,
+          especialidades,
+          taxa_comissao,
+          chave_pix,
+          dados_bancarios,
+          ativo,
+          created_at,
+          updated_at,
           profiles(nome_completo, email, role)
         `)
         .eq('profiles.role', 'professor')
@@ -36,6 +44,8 @@ export function useTeachers() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos de cache
+    gcTime: 10 * 60 * 1000, // 10 minutos antes de garbage collection
   });
 }
 

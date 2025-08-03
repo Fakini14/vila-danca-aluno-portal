@@ -24,14 +24,28 @@ export function useStudents() {
       const { data, error } = await supabase
         .from('students')
         .select(`
-          *,
-          profiles(nome_completo, email, role)
+          id,
+          nome_completo,
+          cpf,
+          whatsapp,
+          auth_status,
+          created_at,
+          updated_at,
+          profiles(nome_completo, email, role),
+          enrollments(
+            id,
+            status,
+            data_matricula,
+            ativa
+          )
         `)
         .order('nome_completo');
       
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos de cache
+    gcTime: 10 * 60 * 1000, // 10 minutos antes de garbage collection
   });
 }
 

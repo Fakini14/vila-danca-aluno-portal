@@ -19,25 +19,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
-import { useTeachers, useDeactivateTeacher } from '@/hooks/useTeachers';
+import { useTeachersOptimized } from '@/hooks/useOptimizedQueries';
+import { useDeactivateTeacher } from '@/hooks/useTeachers';
 import { TeacherFormModal } from '@/components/admin/forms/TeacherFormModal';
 
 interface TeacherData {
   id: string;
-  profile_id: string;
+  nome_completo: string;
+  email: string;
+  role: string;
+  funcao: string;
   especialidades: string[];
   taxa_comissao: number;
-  chave_pix: string;
   dados_bancarios: any;
-  ativo: boolean;
+  chave_pix: string;
+  observacoes: string;
   created_at: string;
   updated_at: string;
-  profiles?: {
-    nome_completo: string;
-    email: string;
-    role: string;
-  };
-  classes?: any[];
+  // Campos calculados pela view materializada
+  total_classes: number;
+  active_classes: number;
 }
 
 
@@ -59,7 +60,7 @@ export default function Teachers() {
   const [showForm, setShowForm] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherData | null>(null);
   
-  const { data: teachers = [], isLoading, error } = useTeachers();
+  const { data: teachers = [], isLoading, error } = useTeachersOptimized();
   const deactivateTeacher = useDeactivateTeacher();
 
   const handleViewTeacher = (teacher: TeacherData) => {
@@ -87,7 +88,7 @@ export default function Teachers() {
   // Define table columns
   const columns: Column<TeacherData>[] = [
     {
-      key: 'profiles.nome_completo',
+      key: 'nome_completo',
       title: 'Professor',
       render: (value, teacher) => (
         <div className="flex items-center gap-3">
@@ -96,7 +97,7 @@ export default function Teachers() {
           </div>
           <div>
             <p className="font-medium">{value}</p>
-            <p className="text-sm text-muted-foreground">{teacher.profiles?.email}</p>
+            <p className="text-sm text-muted-foreground">{teacher.email}</p>
           </div>
         </div>
       )
@@ -132,22 +133,22 @@ export default function Teachers() {
       )
     },
     {
-      key: 'ativo',
+      key: 'funcao',
       title: 'Status',
-      render: (value) => (
+      render: (value, teacher) => (
         <StatusBadge 
-          status={value ? 'Ativo' : 'Inativo'}
-          variant={value ? 'default' : 'destructive'}
+          status={teacher.role === 'professor' ? 'Ativo' : 'Inativo'}
+          variant={teacher.role === 'professor' ? 'default' : 'destructive'}
         />
       )
     },
     {
-      key: 'classes',
+      key: 'total_classes',
       title: 'Turmas',
-      render: (value) => (
+      render: (value, teacher) => (
         <div className="text-sm">
-          {value && value.length > 0 ? (
-            <span>{value.length} turma{value.length !== 1 ? 's' : ''}</span>
+          {value > 0 ? (
+            <span>{value} turma{value !== 1 ? 's' : ''} ({teacher.active_classes} ativa{teacher.active_classes !== 1 ? 's' : ''})</span>
           ) : (
             <span className="text-muted-foreground">Nenhuma</span>
           )}
@@ -178,13 +179,29 @@ export default function Teachers() {
       icon: <Trash2 className="h-4 w-4" />,
       onClick: handleDeactivateTeacher,
       variant: 'destructive',
-      show: (teacher) => teacher.ativo
+      show: (teacher) => teacher.role === 'professor'
     }
   ];
 
   // Calculate statistics
-  const activeTeachers = teachers.filter(t => t.ativo).length;
+  const activeTeachers = teachers.filter(t => t.role === 'professor').length;
   const totalSpecialties = new Set(teachers.flatMap(t => t.especialidades || [])).size;
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold dance-text-gradient">Gestão de Professores</h1>
+          <p className="text-muted-foreground">
+            Gerencie a equipe de professores da escola
+          </p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Erro ao carregar professores</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -210,10 +227,19 @@ export default function Teachers() {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{teachers.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {activeTeachers} ativos
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-20 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{teachers.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {activeTeachers} ativos
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -223,10 +249,19 @@ export default function Teachers() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalSpecialties}</div>
-            <p className="text-xs text-muted-foreground">
-              modalidades oferecidas
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-12 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-32 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{totalSpecialties}</div>
+                <p className="text-xs text-muted-foreground">
+                  modalidades oferecidas
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -236,14 +271,23 @@ export default function Teachers() {
             <Phone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {teachers.length > 0 
-                ? Math.round(teachers.reduce((acc, t) => acc + (t.taxa_comissao || 0), 0) / teachers.length)
-                : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              comissão média
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-14 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-24 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {teachers.length > 0 
+                    ? Math.round(teachers.reduce((acc, t) => acc + (t.taxa_comissao || 0), 0) / teachers.length)
+                    : 0}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  comissão média
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

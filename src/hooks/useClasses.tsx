@@ -33,7 +33,21 @@ export function useClasses() {
       const { data, error } = await supabase
         .from('classes')
         .select(`
-          *,
+          id,
+          nome,
+          modalidade,
+          nivel,
+          dias_semana,
+          horario_inicio,
+          horario_fim,
+          sala,
+          capacidade_maxima,
+          valor_aula,
+          valor_matricula,
+          ativa,
+          professor_principal_id,
+          created_at,
+          tipo,
           staff(profiles(nome_completo))
         `)
         .order('modalidade');
@@ -41,6 +55,8 @@ export function useClasses() {
       if (error) throw error;
       return data;
     },
+    staleTime: 3 * 60 * 1000, // 3 minutos de cache
+    gcTime: 8 * 60 * 1000, // 8 minutos antes de garbage collection
   });
 }
 
@@ -193,6 +209,49 @@ export function useUpdateClass() {
     onError: (error: any) => {
       toast.error(`Erro ao atualizar turma: ${error.message}`);
     },
+  });
+}
+
+// Hook para buscar turmas com contagem de matrículas (usado na interface admin)
+export function useClassesWithEnrollmentCount() {
+  return useQuery({
+    queryKey: ['classes', 'with-enrollment-count'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select(`
+          id,
+          nome,
+          modalidade,
+          nivel,
+          dias_semana,
+          horario_inicio,
+          horario_fim,
+          sala,
+          capacidade_maxima,
+          valor_aula,
+          valor_matricula,
+          ativa,
+          professor_principal_id,
+          created_at,
+          tipo,
+          staff(profiles(nome_completo)),
+          enrollments!inner(id)
+        `)
+        .order('modalidade');
+      
+      if (error) throw error;
+      
+      // Processar dados para incluir contagem
+      return data.map(cls => ({
+        ...cls,
+        _count: {
+          enrollments: cls.enrollments?.length || 0
+        }
+      }));
+    },
+    staleTime: 3 * 60 * 1000, // 3 minutos de cache
+    gcTime: 8 * 60 * 1000, // 8 minutos antes de garbage collection
   });
 }
 

@@ -5,50 +5,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Users, Eye, UserCheck, UserX } from 'lucide-react';
 import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
-import { useStudents, useUpdateStudentStatus } from '@/hooks/useStudents';
+import { useStudentsOptimized } from '@/hooks/useOptimizedQueries';
+import { useUpdateStudentStatus } from '@/hooks/useStudents';
 
 interface StudentData {
   id: string;
   nome_completo: string;
-  cpf: string;
-  whatsapp: string;
+  email: string;
+  role: string;
+  sexo: string;
   data_nascimento: string;
-  endereco: string;
-  contato_emergencia: string;
-  info_medicas: string;
-  auth_status: 'pending' | 'approved' | 'rejected';
+  endereco_completo: string;
+  responsavel_nome: string;
+  responsavel_telefone: string;
+  responsavel_email: string;
+  auth_status: 'pending' | 'active';
   created_at: string;
   updated_at: string;
-  profiles?: {
-    nome_completo: string;
-    email: string;
-    role: string;
-  };
-  enrollments?: any[];
-  // Computed fields
-  email?: string;
-  active_enrollments?: number;
-  total_enrollments?: number;
+  // Campos calculados pela view materializada
+  active_enrollments: number;
+  total_enrollments: number;
 }
 
 export function StudentList() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const navigate = useNavigate();
-  const { data: students = [], isLoading, error } = useStudents();
+  const { data: students = [], isLoading, error } = useStudentsOptimized();
   const updateStudentStatus = useUpdateStudentStatus();
 
-  // Process students data for display
-  const processedStudents = students.map(student => {
-    const activeEnrollments = student.enrollments?.filter(e => e.status === 'ativa') || [];
-    return {
-      ...student,
-      nome_completo: student.profiles?.nome_completo || student.nome_completo || '',
-      email: student.profiles?.email || '',
-      active_enrollments: activeEnrollments.length,
-      total_enrollments: student.enrollments?.length || 0,
-    };
-  });
+  // Os dados já vêm processados da view materializada - não precisamos de processamento adicional
+  const processedStudents = students.map(student => ({
+    ...student,
+    // A view já inclui os campos active_enrollments e total_enrollments calculados
+    email: student.email || '',
+  }));
 
   // Filter data based on status and payment filters
   const filteredStudents = processedStudents.filter(student => {
@@ -78,17 +69,17 @@ export function StudentList() {
       render: (value, student) => (
         <div>
           <p className="font-medium">{value}</p>
-          <p className="text-sm text-muted-foreground">{student.cpf}</p>
+          <p className="text-sm text-muted-foreground">{student.email}</p>
         </div>
       )
     },
     {
-      key: 'profiles.email',
-      title: 'Contato',
+      key: 'responsavel_nome',
+      title: 'Responsável',
       render: (value, student) => (
         <div>
-          <p className="text-sm">{value}</p>
-          <p className="text-sm text-muted-foreground">{student.whatsapp}</p>
+          <p className="text-sm">{value || 'Não informado'}</p>
+          <p className="text-sm text-muted-foreground">{student.responsavel_telefone || ''}</p>
         </div>
       )
     },
@@ -113,8 +104,8 @@ export function StudentList() {
       title: 'Status',
       render: (value) => (
         <StatusBadge 
-          status={value === 'approved' ? 'Aprovado' : value === 'pending' ? 'Pendente' : 'Rejeitado'}
-          variant={value === 'approved' ? 'default' : value === 'pending' ? 'secondary' : 'destructive'}
+          status={value === 'active' ? 'Ativo' : 'Pendente'}
+          variant={value === 'active' ? 'default' : 'secondary'}
         />
       )
     },
@@ -147,7 +138,7 @@ export function StudentList() {
     }
   ];
 
-  const approvedStudents = processedStudents.filter(s => s.auth_status === 'approved').length;
+  const activeStudents = processedStudents.filter(s => s.auth_status === 'active').length;
   const totalEnrollments = processedStudents.reduce((sum, s) => sum + s.active_enrollments, 0);
   const pendingStudents = processedStudents.filter(s => s.auth_status === 'pending').length;
 
@@ -161,10 +152,19 @@ export function StudentList() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{processedStudents.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {approvedStudents} aprovados
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-20 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{processedStudents.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {activeStudents} ativos
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -174,10 +174,19 @@ export function StudentList() {
             <Users className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingStudents}</div>
-            <p className="text-xs text-muted-foreground">
-              cadastros pendentes
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-28 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{pendingStudents}</div>
+                <p className="text-xs text-muted-foreground">
+                  cadastros pendentes
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -187,10 +196,19 @@ export function StudentList() {
             <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalEnrollments}</div>
-            <p className="text-xs text-muted-foreground">
-              em {processedStudents.filter(s => s.active_enrollments > 0).length} alunos
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-24 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{totalEnrollments}</div>
+                <p className="text-xs text-muted-foreground">
+                  em {processedStudents.filter(s => s.active_enrollments > 0).length} alunos
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -200,12 +218,21 @@ export function StudentList() {
             <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {processedStudents.length > 0 ? Math.round((approvedStudents / processedStudents.length) * 100) : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              alunos aprovados
-            </p>
+            {isLoading ? (
+              <>
+                <div className="h-8 w-14 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 w-20 bg-muted animate-pulse rounded mt-1"></div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {processedStudents.length > 0 ? Math.round((activeStudents / processedStudents.length) * 100) : 0}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  alunos ativos
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

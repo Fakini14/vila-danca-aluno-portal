@@ -38,9 +38,6 @@ import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherDashboard from "./pages/teacher/Dashboard";
 import TeacherClasses from "./pages/teacher/Classes";
 import TeacherStudents from "./pages/teacher/Students";
-import TeacherSchedule from "./pages/teacher/Schedule";
-import TeacherCommissions from "./pages/teacher/Commissions";
-import TeacherReports from "./pages/teacher/Reports";
 
 // Protected Route Component
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -101,9 +98,6 @@ const App = () => (
               <Route path="dashboard" element={<TeacherDashboard />} />
               <Route path="classes" element={<TeacherClasses />} />
               <Route path="students" element={<TeacherStudents />} />
-              <Route path="schedule" element={<TeacherSchedule />} />
-              <Route path="commissions" element={<TeacherCommissions />} />
-              <Route path="reports" element={<TeacherReports />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

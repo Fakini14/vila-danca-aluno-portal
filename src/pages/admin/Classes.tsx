@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
-import { useClasses } from '@/hooks/useClasses';
+import { useClassesOptimized } from '@/hooks/useOptimizedQueries';
 import { ClassFormModal } from '@/components/admin/forms/ClassFormModal';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,21 +53,26 @@ interface ClassData {
   nome: string | null;
   modalidade: string;
   nivel: 'basico' | 'intermediario' | 'avancado';
+  tipo: 'regular' | 'workshop' | 'particular' | 'outra';
+  data_inicio: string;
+  data_termino: string | null;
   dias_semana: string[];
   horario_inicio: string;
   horario_fim: string;
+  tempo_total_minutos: number;
   sala: string | null;
   capacidade_maxima: number | null;
   valor_aula: number;
   valor_matricula: number | null;
   ativa: boolean;
   professor_principal_id: string | null;
+  observacoes: string | null;
   created_at: string;
-  tipo: 'regular' | 'workshop' | 'particular' | 'outra';
-  professor?: Teacher;
-  _count?: {
-    enrollments: number;
-  };
+  updated_at: string;
+  professor_nome: string | null;
+  // Campos calculados pela view materializada
+  total_enrollments: number;
+  active_enrollments: number;
 }
 
 const diasSemana = [
@@ -94,7 +99,7 @@ export default function Classes() {
   
   const { toast } = useToast();
   
-  const { data: classes = [], isLoading, error } = useClasses();
+  const { data: classes = [], isLoading, error } = useClassesOptimized();
 
   // Filter classes based on search and filters
   const filteredClasses = classes.filter(cls => {
@@ -180,11 +185,11 @@ export default function Classes() {
       )
     },
     {
-      key: 'professor',
+      key: 'professor_nome',
       title: 'Professor',
-      render: (value, classData) => (
+      render: (value) => (
         <div className="text-sm">
-          {classData.professor?.profiles?.nome_completo || 'Não atribuído'}
+          {value || 'Não atribuído'}
         </div>
       )
     },
@@ -217,12 +222,12 @@ export default function Classes() {
       )
     },
     {
-      key: '_count',
+      key: 'active_enrollments',
       title: 'Alunos',
       render: (value, classData) => (
         <div className="flex items-center gap-2 text-sm">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span>{value?.enrollments || 0}/{classData.capacidade_maxima || '∞'}</span>
+          <span>{value || 0}/{classData.capacidade_maxima || '∞'}</span>
         </div>
       )
     },
@@ -270,7 +275,7 @@ export default function Classes() {
 
   // Calculate statistics
   const activeClasses = classes.filter(c => c.ativa).length;
-  const totalEnrollments = classes.reduce((sum, c) => sum + (c._count?.enrollments || 0), 0);
+  const totalEnrollments = classes.reduce((sum, c) => sum + (c.active_enrollments || 0), 0);
   const uniqueModalities = new Set(classes.map(c => c.modalidade)).size;
 
   if (isLoading) {
@@ -550,10 +555,10 @@ export default function Classes() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {/* Professor */}
-                {turma.professor && (
+                {turma.professor_nome && (
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Prof. {turma.professor.profiles.nome_completo}</span>
+                    <span>Prof. {turma.professor_nome}</span>
                   </div>
                 )}
 
@@ -593,7 +598,7 @@ export default function Classes() {
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{turma._count?.enrollments || 0}/{turma.capacidade_maxima || '∞'}</span>
+                    <span>{turma.active_enrollments || 0}/{turma.capacidade_maxima || '∞'}</span>
                   </div>
                   <Badge variant={turma.ativa ? 'default' : 'secondary'}>
                     {turma.ativa ? 'Ativa' : 'Inativa'}

@@ -14,19 +14,13 @@ import {
   Menu,
   Home,
   BookOpen,
-  Users,
-  Calendar,
-  DollarSign,
-  BarChart3
+  Users
 } from 'lucide-react';
 
 const menuItems = [
   { icon: Home, label: 'Dashboard', path: '/teacher/dashboard' },
   { icon: BookOpen, label: 'Minhas Turmas', path: '/teacher/classes' },
   { icon: Users, label: 'Alunos', path: '/teacher/students' },
-  { icon: Calendar, label: 'Agenda', path: '/teacher/schedule' },
-  { icon: DollarSign, label: 'Comissões', path: '/teacher/commissions' },
-  { icon: BarChart3, label: 'Relatórios', path: '/teacher/reports' },
 ];
 
 export default function TeacherLayout() {
