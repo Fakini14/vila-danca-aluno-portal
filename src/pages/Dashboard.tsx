@@ -29,6 +29,11 @@ const Dashboard = () => {
     return <Navigate to="/teacher/dashboard" replace />;
   }
 
+  // Redirecionar aluno para o novo layout com sidebar
+  if (profile?.role === 'aluno') {
+    return <Navigate to="/student/dashboard" replace />;
+  }
+
   return (
     <Layout>
       <StudentPortal />

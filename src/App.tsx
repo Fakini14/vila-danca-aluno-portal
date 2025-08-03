@@ -39,6 +39,12 @@ import TeacherDashboard from "./pages/teacher/Dashboard";
 import TeacherClasses from "./pages/teacher/Classes";
 import TeacherStudents from "./pages/teacher/Students";
 
+// Student Layout and Pages
+import StudentLayout from "./layouts/StudentLayout";
+import StudentDashboardPage from "./pages/student/Dashboard";
+import StudentClassesPage from "./pages/student/Classes";
+import StudentPaymentsPage from "./pages/student/Payments";
+
 // Protected Route Component
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -98,6 +104,20 @@ const App = () => (
               <Route path="dashboard" element={<TeacherDashboard />} />
               <Route path="classes" element={<TeacherClasses />} />
               <Route path="students" element={<TeacherStudents />} />
+            </Route>
+
+            {/* Student Routes */}
+            <Route path="/student" element={
+              <ProtectedRoute allowedRoles={['aluno']}>
+                <ErrorBoundary>
+                  <StudentLayout />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }>
+              <Route index element={<Navigate to="/student/dashboard" replace />} />
+              <Route path="dashboard" element={<StudentDashboardPage />} />
+              <Route path="classes" element={<StudentClassesPage />} />
+              <Route path="payments" element={<StudentPaymentsPage />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
