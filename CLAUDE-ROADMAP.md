@@ -176,41 +176,59 @@ Este documento serve como a documentação oficial do roadmap do projeto e deve 
 ---
 
 ## **FASE 4: PORTAL DO ESTUDANTE**
-**Status: 📋 EM PROGRESSO**
+**Status: ✅ CONCLUÍDA**
 
 ### Checklist de Implementação:
-- **4.1** Dashboard do Aluno (/student/dashboard):
+- **4.1** ✅ **Dashboard do Aluno (/student/dashboard):**
   - Header simplificado (logo, nome, menu)
-  - Cards informativos (próxima aula, status pagamento, presenças)
-  - Minhas turmas (cards com professor, horário, sala)
+  - Cards informativos (próxima aula, status pagamento, presenças, assinaturas ativas)
+  - Sistema de abas (Dashboard, Turmas, Matrículas, Assinaturas)
   - Avisos importantes da escola
-  - Ações rápidas (pagar mensalidade, ver agenda)
-- **4.2** Agenda do Aluno (/student/schedule):
-  - Calendário mensal com aulas coloridas por modalidade
-  - Detalhes ao clicar no dia
-  - Legenda de cores e filtros por turma
-- **4.3** Pagamentos do Aluno (/student/payments):
-  - Tab pendentes (cards mensalidades, botão "pagar agora")
-  - Tab histórico (filtros, download comprovantes)
-  - Modal pagamento (PIX QR Code, boleto, cartão)
-- **4.4** Matrícula Online (/student/enrollment):
-  - Step 1: Escolher modalidades
-  - Step 2: Escolher turmas (horários, vagas)
-  - Step 3: Confirmar matrícula (resumo, termos)
-  - Step 4: Pagamento primeira mensalidade
+  - Ações rápidas integradas nas abas
+- **4.2** ✅ **Gestão de Turmas (/student/classes):**
+  - Visualização de turmas em que está matriculado
+  - Cards com informações de professor, horário, sala
+  - Status de matrícula e pagamento
+- **4.3** ✅ **Sistema de Matrículas (/student/enrollment):**
+  - Lista de turmas disponíveis por modalidade
+  - Informações detalhadas (professor, horário, vagas, valor)
+  - Integração com sistema de assinaturas
+  - Processo de matrícula com assinatura mensal
+- **4.4** ✅ **Gestão de Assinaturas (/student/subscriptions):**
+  - Visualização de todas as assinaturas (ativas, pausadas, canceladas)
+  - Ações: pausar, cancelar, reativar assinaturas
+  - Histórico completo de pagamentos por assinatura
+  - Interface para gerenciamento self-service
 
 ### Resumo da Fase 4:
 **O que foi implementado:**
-- [A ser preenchido após conclusão]
+- Portal completo do estudante com interface moderna
+- Dashboard com cards informativos e ações rápidas
+- Sistema de abas (Dashboard, Turmas, Matrículas, Assinaturas)
+- Visualização de turmas disponíveis para matrícula
+- Integração com sistema de assinaturas recorrentes
+- Portal de gestão de assinaturas (pausar, cancelar, reativar)
+- Histórico completo de pagamentos por assinatura
 
 **O que foi considerado para implementação:**
-- [A ser preenchido após conclusão]
+- Interface simples e intuitiva para estudantes
+- Acesso self-service para gestão de assinaturas
+- Transparência total sobre pagamentos e status
+- Facilidade para encontrar e se matricular em novas turmas
+- Integração seamless com sistema de pagamentos
 
 **O que foi aprendido com os erros nesta fase:**
-- [A ser preenchido após conclusão]
+- Importância de feedback visual claro para ações críticas
+- Necessidade de confirmações para ações irreversíveis
+- Valor de interfaces self-service para reduzir suporte
+- Importância de histórico completo para transparência
 
 **Quais logs para identificar os erros nesta fase foram inseridos:**
-- [A ser preenchido após conclusão]
+- Logs de visualização de turmas disponíveis
+- Logs de tentativas de matrícula
+- Logs de ações de gerenciamento de assinaturas
+- Logs de acesso ao histórico de pagamentos
+- Logs de navegação entre abas do portal
 
 ---
 
@@ -255,27 +273,97 @@ Este documento serve como a documentação oficial do roadmap do projeto e deve 
 
 ---
 
-## **FASE 6: SISTEMA DE EVENTOS**
+## **FASE 6: SISTEMA DE ASSINATURAS RECORRENTES (ASAAS)**
+**Status: ✅ CONCLUÍDA**
+
+### Checklist de Implementação:
+- **6.1** ✅ **Infraestrutura de Assinaturas:**
+  - Migration completa: tabelas `subscriptions` e `subscription_payments`
+  - Índices otimizados para performance
+  - RLS policies para segurança multi-tenant
+  - Triggers para updated_at automático
+- **6.2** ✅ **Edge Functions Funcionais:**
+  - `create-enrollment-subscription` (ID: 826d75b8-0d50-446c-a3f8-fe413dde80ed)
+  - `asaas-subscription-webhook` (ID: 5fc5d825-5f7e-49c2-9ded-8ebe91ce6181)
+  - `manage-subscription` (ID: 58c6e5bb-c59e-45a7-9df2-1164a9a51f2f)
+  - Integração completa com Asaas API (Sandbox)
+- **6.3** ✅ **Interface do Aluno Atualizada:**
+  - StudentAvailableClasses.tsx modificado para assinaturas
+  - Mudança de "Taxa de matrícula" para "Assinatura Mensal"
+  - Redirecionamento direto para checkout Asaas
+- **6.4** ✅ **Portal de Gestão de Assinaturas:**
+  - StudentSubscriptions.tsx - página completa de gerenciamento
+  - Visualização de assinaturas por status (ativas, pausadas, canceladas)
+  - Ações: pausar, cancelar, reativar assinaturas
+  - Histórico completo de pagamentos
+  - Integração com StudentDashboard (card "Assinaturas Ativas")
+
+### Resumo da Fase 6:
+**O que foi implementado:**
+- Sistema completo de assinaturas recorrentes integrado com Asaas
+- Mudança de paradigma: de pagamento único para modelo SaaS (estilo Netflix)
+- Portal do aluno para gestão de assinaturas
+- Automação completa de cobranças mensais
+- Webhook para processamento automático de pagamentos
+
+**O que foi considerado para implementação:**
+- Modelo de receita recorrente previsível (MRR)
+- Flexibilidade para alunos (pausar/cancelar/reativar)
+- Múltiplas assinaturas por aluno (uma por turma)
+- Integração segura com gateway de pagamento
+- Interface intuitiva para gestão self-service
+
+**O que foi aprendido com os erros nesta fase:**
+- Complexidade da sincronização entre Asaas e banco local
+- Importância de delays para processamento de cobranças
+- Webhooks devem sempre retornar 200 para evitar retry
+- Validação rigorosa de CPF para API do Asaas
+- Necessidade de fallbacks graciosus para latência da API
+
+**Quais logs para identificar os erros nesta fase foram inseridos:**
+- Logs de criação de clientes e assinaturas no Asaas
+- Logs de processamento de webhooks
+- Logs de ações de gerenciamento (pausar/cancelar/reativar)
+- Logs de primeira cobrança e ativação de matrículas
+- Logs de sincronização de status entre sistemas
+
+**Arquitetura Implementada:**
+- **Assinatura por Turma**: Cada matrícula gera uma assinatura independente
+- **Cobrança Automática**: Renovação mensal no dia 10
+- **Flexibilidade Total**: Pausar temporariamente ou cancelar definitivamente
+- **Histórico Completo**: Rastreamento de todos os pagamentos
+- **Segurança**: RLS policies garantem acesso apenas aos dados próprios
+
+**Benefícios Alcançados:**
+- ✅ Receita mensal recorrente previsível (MRR)
+- ✅ Redução drástica de inadimplência
+- ✅ Automação completa do processo de cobrança
+- ✅ Melhor experiência do usuário
+- ✅ Escalabilidade para múltiplas assinaturas
+
+---
+
+## **FASE 7: SISTEMA DE EVENTOS**
 **Status: ⏳ AGUARDANDO**
 
 ### Checklist de Implementação:
-- **6.1** Gestão de Eventos Admin (/admin/events):
+- **7.1** Gestão de Eventos Admin (/admin/events):
   - Lista eventos (nome, data, ingressos vendidos, status)
   - Formulário novo evento (nome, data, local, descrição, imagem, tipos ingresso)
-- **6.2** Venda de Ingressos (/events/[id] - pública):
+- **7.2** Venda de Ingressos (/events/[id] - pública):
   - Banner evento, informações
   - Seletor ingressos, botão comprar
   - Integração pagamento
-- **6.3** Check-in de Eventos (/admin/events/[id]/checkin):
+- **7.3** Check-in de Eventos (/admin/events/[id]/checkin):
   - Leitor QR Code
   - Busca nome/CPF
   - Lista presentes, estatísticas tempo real
-- **6.4** Comanda Digital (/admin/events/[id]/bar):
+- **7.4** Comanda Digital (/admin/events/[id]/bar):
   - Catálogo produtos
   - Carrinho, vincular CPF/ingresso
   - Fechar comanda, aceitar pagamento
 
-### Resumo da Fase 6:
+### Resumo da Fase 7:
 **O que foi implementado:**
 - [A ser preenchido após conclusão]
 

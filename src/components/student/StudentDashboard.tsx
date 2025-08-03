@@ -13,7 +13,8 @@ import {
   BookOpen,
   AlertCircle,
   CheckCircle,
-  Heart
+  Heart,
+  Repeat
 } from 'lucide-react';
 import { format, isThisWeek, startOfWeek, endOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +26,8 @@ interface DashboardData {
   announcements: Announcement[];
   availableClasses: AvailableClass[];
   enrolledClasses: EnrolledClass[];
+  activeSubscriptions: number;
+  nextSubscriptionDue: string | null;
 }
 
 interface ClassSchedule {
@@ -132,6 +135,13 @@ export function StudentDashboard() {
         .eq('ativa', true)
         .not('id', 'in', `(${enrolledClassIds.join(',') || 'null'})`);
 
+      // Fetch active subscriptions
+      const { data: subscriptions } = await supabase
+        .from('subscriptions')
+        .select('status, next_due_date')
+        .eq('student_id', profile.id)
+        .eq('status', 'active');
+
       // Process data
       const processedEnrolledClasses = enrolledClasses?.filter(e => e.class).map(e => ({
         ...e.class!,
@@ -144,13 +154,21 @@ export function StudentDashboard() {
       // Calculate payment summary
       const paymentSummary = calculatePaymentSummary(pendingPayments || []);
 
+      // Calculate next subscription due date
+      const activeSubscriptions = subscriptions?.length || 0;
+      const nextSubscriptionDue = subscriptions && subscriptions.length > 0
+        ? subscriptions.sort((a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime())[0].next_due_date
+        : null;
+
       setDashboardData({
         welcomeMessage: `Olá, ${profile.nome_completo.split(' ')[0]}! Bem-vindo ao seu portal.`,
         upcomingClasses,
         paymentStatus: paymentSummary,
         announcements: announcements || [],
         availableClasses: availableClasses || [],
-        enrolledClasses: processedEnrolledClasses
+        enrolledClasses: processedEnrolledClasses,
+        activeSubscriptions,
+        nextSubscriptionDue
       });
 
     } catch (error) {
@@ -267,7 +285,7 @@ export function StudentDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Próximas Aulas</CardTitle>
@@ -276,6 +294,22 @@ export function StudentDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.upcomingClasses.length}</div>
             <p className="text-xs text-muted-foreground">Esta semana</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Assinaturas Ativas</CardTitle>
+            <Repeat className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardData.activeSubscriptions}</div>
+            <p className="text-xs text-muted-foreground">
+              {dashboardData.nextSubscriptionDue 
+                ? `Próx: ${format(new Date(dashboardData.nextSubscriptionDue), 'dd/MM', { locale: ptBR })}`
+                : 'Sem assinaturas'
+              }
+            </p>
           </CardContent>
         </Card>
 

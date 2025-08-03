@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudentDashboard } from './StudentDashboard';
 import { StudentPayments } from './StudentPayments';
 import { StudentAvailableClasses } from './StudentAvailableClasses';
-import { LayoutDashboard, CreditCard, Search } from 'lucide-react';
+import StudentSubscriptions from './StudentSubscriptions';
+import { LayoutDashboard, CreditCard, Search, Repeat } from 'lucide-react';
 
 export function StudentPortalTabs() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -18,7 +19,7 @@ export function StudentPortalTabs() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
@@ -26,6 +27,10 @@ export function StudentPortalTabs() {
           <TabsTrigger value="classes" className="flex items-center gap-2">
             <Search className="h-4 w-4" />
             Turmas
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
+            <Repeat className="h-4 w-4" />
+            Assinaturas
           </TabsTrigger>
           <TabsTrigger value="payments" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
@@ -39,6 +44,10 @@ export function StudentPortalTabs() {
 
         <TabsContent value="classes" className="mt-6">
           <StudentAvailableClasses />
+        </TabsContent>
+
+        <TabsContent value="subscriptions" className="mt-6">
+          <StudentSubscriptions />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">
