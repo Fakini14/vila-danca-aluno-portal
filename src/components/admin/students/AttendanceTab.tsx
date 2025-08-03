@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -48,11 +48,7 @@ export function AttendanceTab({ studentId }: AttendanceTabProps) {
   const [filterClass, setFilterClass] = useState<string>('all');
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchAttendanceData();
-  }, [studentId, filterMonth]);
-
-  const fetchAttendanceData = async () => {
+  const fetchAttendanceData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -143,7 +139,11 @@ export function AttendanceTab({ studentId }: AttendanceTabProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId, filterMonth, toast]);
+
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [fetchAttendanceData]);
 
   const getAttendanceIcon = (presente: boolean) => {
     return presente ? (

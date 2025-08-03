@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,11 +26,7 @@ export function StaffManager() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchStaff();
-  }, []);
-
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -50,7 +46,11 @@ export function StaffManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
 
   const resendInvitation = async (staffId: string, email: string) => {
     try {

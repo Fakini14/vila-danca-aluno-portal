@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,11 +56,7 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
   const [enrollmentModalOpen, setEnrollmentModalOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchEnrollments();
-  }, [studentId]);
-
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -146,7 +142,11 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId, toast]);
+
+  useEffect(() => {
+    fetchEnrollments();
+  }, [fetchEnrollments]);
 
   const handleToggleEnrollment = async (enrollmentId: string, currentStatus: boolean) => {
     try {

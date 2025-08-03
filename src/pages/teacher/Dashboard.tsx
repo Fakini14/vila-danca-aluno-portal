@@ -1,32 +1,17 @@
-import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { 
-  GraduationCap, 
   Users, 
   Calendar, 
   DollarSign,
   BookOpen,
   Clock,
-  TrendingUp,
-  Star
+  TrendingUp
 } from 'lucide-react';
 
 export default function TeacherDashboard() {
-  const { profile } = useAuth();
 
   return (
     <div className="space-y-6">
-      {/* Header de Boas-vindas */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold dance-text-gradient">
-          Bem-vindo, {profile?.nome_completo?.split(' ')[0]}! 👨‍🏫
-        </h1>
-        <p className="text-muted-foreground">
-          Aqui está um resumo das suas atividades na Vila Dança & Arte
-        </p>
-      </div>
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -116,39 +101,6 @@ export default function TeacherDashboard() {
           </CardContent>
         </Card>
 
-        {/* Status do Perfil */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" />
-              Status do Perfil
-            </CardTitle>
-            <CardDescription>
-              Complete seu perfil para melhor experiência
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Informações Básicas</span>
-              <Badge variant="default" className="bg-green-500">Completo</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Especialidades</span>
-              <Badge variant="secondary">Pendente</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Dados Bancários</span>
-              <Badge variant="secondary">Pendente</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Taxa de Comissão</span>
-              <Badge variant="secondary">Pendente</Badge>
-            </div>
-            <Button variant="outline" className="w-full mt-4">
-              Completar Perfil
-            </Button>
-          </CardContent>
-        </Card>
 
         {/* Resumo de Performance */}
         <Card>
@@ -185,65 +137,8 @@ export default function TeacherDashboard() {
           </CardContent>
         </Card>
 
-        {/* Ações Rápidas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Ações Rápidas
-            </CardTitle>
-            <CardDescription>
-              Acesso rápido às funcionalidades principais
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
-              <Calendar className="mr-2 h-4 w-4" />
-              Ver Agenda Completa
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <BookOpen className="mr-2 h-4 w-4" />
-              Gerenciar Turmas
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Users className="mr-2 h-4 w-4" />
-              Lista de Alunos
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <DollarSign className="mr-2 h-4 w-4" />
-              Relatório de Comissões
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Mensagem de Boas-vindas */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-start space-x-4">
-            <div className="p-2 rounded-full bg-primary/10">
-              <GraduationCap className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-2">
-                Bem-vindo ao Portal do Professor! 🎉
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Este é seu espaço para gerenciar turmas, acompanhar alunos, registrar presenças e visualizar suas comissões. 
-                Para começar, complete seu perfil e aguarde a atribuição de turmas pelo administrador.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">
-                  Portal em Desenvolvimento
-                </Badge>
-                <Badge variant="outline">
-                  Fase 2 - Day 21-23
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

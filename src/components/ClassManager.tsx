@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,11 +33,7 @@ export function ClassManager() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchClasses();
-  }, []);
-
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('classes')
@@ -56,7 +52,11 @@ export function ClassManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchClasses();
+  }, [fetchClasses]);
 
   const filteredClasses = classes.filter(cls =>
     cls.modalidade.toLowerCase().includes(searchTerm.toLowerCase())
