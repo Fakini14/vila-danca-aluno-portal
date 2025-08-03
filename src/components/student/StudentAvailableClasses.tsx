@@ -165,64 +165,54 @@ export function StudentAvailableClasses() {
 
     try {
       const enrollmentDate = new Date().toISOString().split('T')[0];
-      const matriculaFee = classItem.valor_matricula || 50; // Default enrollment fee
+      const monthlyValue = classItem.valor_aula || 150; // Use valor_aula for monthly subscription
 
-      // Create enrollment (initially inactive)
+      // Create enrollment (initially inactive - will be activated after first payment)
       const { data: enrollment, error: enrollmentError } = await supabase
         .from('enrollments')
         .insert({
           student_id: profile.id,
           class_id: classItem.id,
           data_matricula: enrollmentDate,
-          valor_pago_matricula: matriculaFee,
-          ativa: false, // Will be activated after payment
+          valor_pago_matricula: 0, // No enrollment fee for subscriptions
+          ativa: false, // Will be activated after first payment
         })
         .select()
         .single();
 
       if (enrollmentError) throw enrollmentError;
 
-      // Create payment record
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert({
+      // Call create-enrollment-subscription edge function
+      const { data: subscriptionData, error: subscriptionError } = await supabase.functions.invoke('create-enrollment-subscription', {
+        body: {
           student_id: profile.id,
           enrollment_id: enrollment.id,
-          amount: matriculaFee,
-          due_date: enrollmentDate,
-          status: 'pendente',
-          description: `Taxa de matrícula - ${classItem.nome}`,
-        })
-        .select()
-        .single();
-
-      if (paymentError) throw paymentError;
-
-      // Call create-enrollment-payment edge function
-      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-enrollment-payment', {
-        body: {
-          payment_id: payment.id,
-          student_id: profile.id,
-          enrollment_ids: [enrollment.id],
-          amount: matriculaFee,
-          description: `Matrícula - ${classItem.nome}`,
-          due_date: enrollmentDate,
+          class_id: classItem.id,
+          billing_type: 'PIX', // Default to PIX, can be made configurable later
           customer: {
             name: profile.nome_completo,
             email: profile.email,
             cpfCnpj: profile.cpf,
             phone: profile.whatsapp || profile.telefone
-          }
+          },
+          value: monthlyValue,
+          class_name: classItem.nome || classItem.modalidade,
+          due_day: 10 // Default to 10th of each month
         }
       });
 
-      if (checkoutError) throw checkoutError;
+      if (subscriptionError) throw subscriptionError;
 
-      if (checkoutData?.checkout_url) {
-        // Redirect to checkout page
-        window.location.href = `/checkout/${payment.id}`;
+      if (subscriptionData?.firstPayment?.invoiceUrl) {
+        // Redirect to Asaas payment page for first payment
+        window.location.href = subscriptionData.firstPayment.invoiceUrl;
       } else {
-        throw new Error('URL de checkout não foi gerada');
+        toast({
+          title: 'Assinatura criada!',
+          description: 'Sua assinatura foi criada com sucesso. Aguardando geração da primeira cobrança.',
+        });
+        // Refresh the classes list
+        fetchAvailableClasses();
       }
 
     } catch (error) {
@@ -321,15 +311,14 @@ export function StudentAvailableClasses() {
                 </div>
 
                 <div className="border-t pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Valor por aula</div>
-                      <div className="font-semibold">{formatCurrency(classItem.valor_aula)}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">Taxa matrícula</div>
-                      <div className="font-semibold">
-                        {formatCurrency(classItem.valor_matricula || 50)}
+                  <div className="mb-3">
+                    <div className="text-center">
+                      <div className="text-sm text-muted-foreground">Assinatura Mensal</div>
+                      <div className="text-2xl font-bold text-primary">
+                        {formatCurrency(classItem.valor_aula)}/mês
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Cobrança automática todo dia 10
                       </div>
                     </div>
                   </div>
@@ -342,12 +331,12 @@ export function StudentAvailableClasses() {
                     {enrollingClass === classItem.id ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processando...
+                        Criando assinatura...
                       </>
                     ) : (
                       <>
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        {isFull ? 'Turma Lotada' : 'Matricular-se'}
+                        {isFull ? 'Turma Lotada' : 'Assinar Mensalidade'}
                       </>
                     )}
                   </Button>
