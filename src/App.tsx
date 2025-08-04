@@ -32,6 +32,9 @@ import AdminSettings from "./pages/admin/Settings";
 import { CheckoutPage } from "./components/checkout/CheckoutPage";
 import { CheckoutSuccess } from "./components/checkout/CheckoutSuccess";
 import { CheckoutFailure } from "./components/checkout/CheckoutFailure";
+import CheckoutSuccessNew from "./pages/checkout/CheckoutSuccess";
+import CheckoutCancel from "./pages/checkout/CheckoutCancel";
+import CheckoutExpired from "./pages/checkout/CheckoutExpired";
 
 // Teacher Layout and Pages
 import TeacherLayout from "./layouts/TeacherLayout";
@@ -69,7 +72,9 @@ const App = () => (
             
             {/* Checkout Routes */}
             <Route path="/checkout/:paymentId" element={<CheckoutPage />} />
-            <Route path="/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="/checkout/success" element={<CheckoutSuccessNew />} />
+            <Route path="/checkout/cancel" element={<CheckoutCancel />} />
+            <Route path="/checkout/expired" element={<CheckoutExpired />} />
             <Route path="/checkout/failure" element={<CheckoutFailure />} />
             
             {/* Admin Routes */}
