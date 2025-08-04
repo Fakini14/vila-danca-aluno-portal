@@ -46,16 +46,27 @@ Este documento detalha a implementação **COMPLETA** da integração com ASAAS 
 ### ✅ O que Funcionou Bem
 
 1. **Checkout API vs Subscription API**: Usar a API de Checkout proporcionou melhor UX que criar subscriptions diretamente
-2. **Validação de API antes do uso**: Testar conectividade antes de processar evita erros 502
+2. **Headers duplos de autenticação**: Usar tanto `access_token` quanto `Authorization: Bearer` garante compatibilidade
 3. **Tratamento de erros específicos**: Mensagens contextuais melhoram a experiência do usuário
 4. **Configuração via painel**: Secrets configurados no painel Supabase são mais confiáveis que via CLI
+5. **nextDueDate vs startDate**: A API do Asaas espera `nextDueDate` no objeto subscription
 
 ### ⚠️ Desafios Superados
 
-1. **Erro 502 Bad Gateway**: Resolvido com validação prévia da API key
-2. **Secrets não configurados**: Edge function detecta e orienta configuração
-3. **Error handling**: Implementação robusta de diferentes tipos de erro
-4. **Logging detalhado**: Facilita debugging em produção
+1. **Erro 502 Bad Gateway - Primeira tentativa**: Tentativa de validação prévia da API causava falha rápida
+2. **Erro 502 Bad Gateway - Segunda tentativa**: Campo `startDate` incorreto no payload, deveria ser `nextDueDate`
+3. **Headers de autenticação**: API do Asaas aceita múltiplos formatos, usar ambos garante compatibilidade
+4. **Secrets não configurados**: Edge function detecta e orienta configuração
+5. **Error handling**: Implementação robusta de diferentes tipos de erro
+6. **Logging detalhado**: Facilita debugging em produção
+
+### 🔧 Correções Aplicadas (Versão 12)
+
+1. **Payload corrigido**: `subscription.nextDueDate` em vez de `subscription.startDate`
+2. **Headers duplos**: Enviando tanto `access_token` quanto `Authorization: Bearer`
+3. **Removida validação prévia**: Vai direto para operações reais em vez de testar conectividade
+4. **Modo de teste**: `class_name: "TEST_MODE"` permite testar só as credenciais
+5. **Logging aprimorado**: Cada etapa logga detalhes para debugging
 
 ## 💾 Configuração Atual
 
@@ -127,10 +138,12 @@ ASAAS_ENVIRONMENT = sandbox
 ## 🚦 Status da Implementação
 
 ### ✅ Completamente Implementado
-- [x] Edge function create-subscription-checkout (versão 5)
+- [x] Edge function create-subscription-checkout (versão 12)
 - [x] Interface de matrícula com assinaturas
 - [x] Páginas de callback (success, cancel, expired)
-- [x] Validação de API e tratamento de erros
+- [x] Payload corrigido com nextDueDate
+- [x] Headers de autenticação duplos
+- [x] Modo de teste para debugging
 - [x] Logging detalhado para monitoramento
 - [x] Integração com Asaas Checkout API
 

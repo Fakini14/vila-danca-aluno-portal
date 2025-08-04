@@ -1,7 +1,4 @@
 import { useAuth } from '@/hooks/useAuth';
-import { Layout } from '@/components/Layout';
-import { StudentPortal } from '@/components/StudentPortal';
-import { AdminDashboard } from '@/components/AdminDashboard';
 import { Navigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -34,11 +31,8 @@ const Dashboard = () => {
     return <Navigate to="/student/dashboard" replace />;
   }
 
-  return (
-    <Layout>
-      <StudentPortal />
-    </Layout>
-  );
+  // Se chegou até aqui, a role não é reconhecida
+  return <Navigate to="/auth" replace />;
 };
 
 export default Dashboard;

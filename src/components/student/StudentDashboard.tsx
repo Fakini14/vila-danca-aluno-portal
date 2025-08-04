@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,18 +82,14 @@ export function StudentDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (profile?.role === 'aluno') {
-      fetchDashboardData();
-    }
-  }, [profile]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     if (!profile) return;
 
+    setLoading(true);
+    
     try {
       // Fetch enrolled classes
-      const { data: enrolledClasses } = await supabase
+      const { data: enrolledClasses, error: enrolledError } = await supabase
         .from('enrollments')
         .select(`
           data_matricula,
@@ -111,15 +107,25 @@ export function StudentDashboard() {
         .eq('student_id', profile.id)
         .eq('ativa', true);
 
+      if (enrolledError) {
+        console.error('Error fetching enrolled classes:', enrolledError);
+        throw enrolledError;
+      }
+
       // Fetch payment status
-      const { data: pendingPayments } = await supabase
+      const { data: pendingPayments, error: paymentsError } = await supabase
         .from('payments')
         .select('amount, due_date, status')
         .eq('student_id', profile.id)
         .in('status', ['pendente', 'vencido']);
 
+      if (paymentsError) {
+        console.error('Error fetching pending payments:', paymentsError);
+        // Continue execution - payments are not critical for dashboard loading
+      }
+
       // Fetch announcements
-      const { data: announcements } = await supabase
+      const { data: announcements, error: announcementsError } = await supabase
         .from('announcements')
         .select('id, title, content, priority, created_at')
         .eq('published', true)
@@ -127,20 +133,42 @@ export function StudentDashboard() {
         .order('created_at', { ascending: false })
         .limit(5);
 
+      if (announcementsError) {
+        console.error('Error fetching announcements:', announcementsError);
+        // Continue execution - announcements are not critical for dashboard loading
+      }
+
       // Fetch available classes (not enrolled)
       const enrolledClassIds = enrolledClasses?.map(e => e.class?.id).filter(Boolean) || [];
-      const { data: availableClasses } = await supabase
+      
+      let availableClassesQuery = supabase
         .from('classes')
         .select('id, modalidade, nivel, tipo, dias_semana, horario_inicio, horario_fim, valor_aula')
-        .eq('ativa', true)
-        .not('id', 'in', `(${enrolledClassIds.join(',') || 'null'})`);
+        .eq('ativa', true);
+      
+      // Only add the exclusion filter if there are enrolled classes
+      if (enrolledClassIds.length > 0) {
+        availableClassesQuery = availableClassesQuery.not('id', 'in', `(${enrolledClassIds.join(',')})`);
+      }
+      
+      const { data: availableClasses, error: availableClassesError } = await availableClassesQuery;
+
+      if (availableClassesError) {
+        console.error('Error fetching available classes:', availableClassesError);
+        // Continue execution - available classes are not critical for dashboard loading
+      }
 
       // Fetch active subscriptions
-      const { data: subscriptions } = await supabase
+      const { data: subscriptions, error: subscriptionsError } = await supabase
         .from('subscriptions')
         .select('status, next_due_date')
         .eq('student_id', profile.id)
         .eq('status', 'active');
+
+      if (subscriptionsError) {
+        console.error('Error fetching subscriptions:', subscriptionsError);
+        // Continue execution - subscriptions are not critical for dashboard loading
+      }
 
       // Process data
       const processedEnrolledClasses = enrolledClasses?.filter(e => e.class).map(e => ({
@@ -176,7 +204,14 @@ export function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
+
+  useEffect(() => {
+    // Only fetch data if we have a student profile
+    if (profile?.role === 'aluno' && profile?.id) {
+      fetchDashboardData();
+    }
+  }, [profile?.role, profile?.id, fetchDashboardData]);
 
   const generateUpcomingClasses = (classes: EnrolledClass[]): ClassSchedule[] => {
     const today = new Date();
@@ -214,7 +249,7 @@ export function StudentDashboard() {
     return schedule.sort((a, b) => a.data.getTime() - b.data.getTime());
   };
 
-  const calculatePaymentSummary = (payments: any[]): PaymentSummary => {
+  const calculatePaymentSummary = (payments: { status: string; amount: string; due_date: string }[]): PaymentSummary => {
     const pending = payments.filter(p => p.status === 'pendente');
     const overdue = payments.filter(p => p.status === 'vencido');
     
