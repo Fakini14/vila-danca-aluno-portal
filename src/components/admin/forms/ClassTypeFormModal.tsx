@@ -21,17 +21,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Palette } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres').max(255, 'Nome muito longo'),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Cor deve estar no formato hexadecimal (#RRGGBB)'),
-  description: z.string().max(500, 'Descrição muito longa').optional(),
-  active: z.boolean().default(true),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -39,9 +34,6 @@ type FormData = z.infer<typeof formSchema>;
 interface ClassType {
   id: string;
   name: string;
-  color: string;
-  description: string | null;
-  active: boolean;
 }
 
 interface ClassTypeFormModalProps {
@@ -59,9 +51,6 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      color: '#6366F1',
-      description: '',
-      active: true,
     },
   });
 
@@ -69,16 +58,10 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
     if (classType) {
       form.reset({
         name: classType.name,
-        color: classType.color,
-        description: classType.description || '',
-        active: classType.active,
       });
     } else {
       form.reset({
         name: '',
-        color: '#6366F1',
-        description: '',
-        active: true,
       });
     }
   }, [classType, form]);
@@ -98,7 +81,7 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
       });
       onSuccess();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao criar modalidade',
         description: error.message,
@@ -125,7 +108,7 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
       });
       onSuccess();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao atualizar modalidade',
         description: error.message,
@@ -176,80 +159,9 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cor da Modalidade</FormLabel>
-                  <FormControl>
-                    <div className="flex gap-2">
-                      <Input
-                        type="color"
-                        className="w-16 h-10 p-1 cursor-pointer"
-                        {...field}
-                      />
-                      <Input
-                        placeholder="#RRGGBB"
-                        value={field.value}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value.match(/^#[0-9A-F]{0,6}$/i) || value === '') {
-                            field.onChange(value.toUpperCase());
-                          }
-                        }}
-                        className="font-mono"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Escolha uma cor para identificar esta modalidade
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição (opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Breve descrição sobre a modalidade..."
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
 
-            <FormField
-              control={form.control}
-              name="active"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Modalidade Ativa</FormLabel>
-                    <FormDescription>
-                      Modalidades inativas não aparecerão na criação de turmas
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+
 
             <div className="flex gap-3 pt-4">
               <Button

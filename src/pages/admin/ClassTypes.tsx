@@ -17,9 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 interface ClassType {
   id: string;
   name: string;
-  color: string;
-  description: string | null;
-  active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -145,12 +142,7 @@ export default function ClassTypes() {
             <div className="divide-y">
               {classTypes.map((classType) => (
                 <div key={classType.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    {/* Círculo colorido */}
-                    <div 
-                      className="w-6 h-6 rounded-full border border-gray-200"
-                      style={{ backgroundColor: classType.color }}
-                    />
+                  <div className="flex items-center">
                     {/* Nome da modalidade */}
                     <span className="font-medium">{classType.name}</span>
                   </div>

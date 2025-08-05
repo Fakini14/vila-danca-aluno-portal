@@ -94,28 +94,19 @@ export type Database = {
       }
       class_types: {
         Row: {
-          active: boolean | null
-          color: string
           created_at: string | null
-          description: string | null
           id: string
           name: string
           updated_at: string | null
         }
         Insert: {
-          active?: boolean | null
-          color?: string
           created_at?: string | null
-          description?: string | null
           id?: string
           name: string
           updated_at?: string | null
         }
         Update: {
-          active?: boolean | null
-          color?: string
           created_at?: string | null
-          description?: string | null
           id?: string
           name?: string
           updated_at?: string | null
@@ -237,13 +228,6 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enrollments_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students_with_enrollments"
             referencedColumns: ["id"]
           },
         ]
@@ -539,45 +523,11 @@ export type Database = {
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "subscriptions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students_with_enrollments"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
-      students_with_enrollments: {
-        Row: {
-          active_enrollments: number | null
-          auth_status: string | null
-          cep: string | null
-          created_at: string | null
-          data_nascimento: string | null
-          email: string | null
-          endereco_completo: string | null
-          id: string | null
-          nome_completo: string | null
-          profile_email: string | null
-          role: Database["public"]["Enums"]["user_role"] | null
-          sexo: Database["public"]["Enums"]["sexo"] | null
-          total_enrollments: number | null
-          updated_at: string | null
-          whatsapp: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "students_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       ensure_student_record: {

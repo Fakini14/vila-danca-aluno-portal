@@ -830,7 +830,36 @@ class_teachers(profiles(nome_completo))
 - **Queries otimizadas**: JOINs diretos substituem views materializadas
 - **Cache coordenado**: Invalidação inteligente entre hooks relacionados
 
+### 🔨 Remoção Completa da View Materializada (Consolidação Final)
+
+**Objetivo**: Completar a consolidação arquitetural removendo a última view materializada do sistema.
+
+**✅ Implementação Realizada:**
+
+**Remoção da View `students_with_enrollments`:**
+- Executado comando SQL: `DROP MATERIALIZED VIEW IF EXISTS students_with_enrollments CASCADE;`
+- Regeneração dos tipos TypeScript após remoção
+- Seção Views nos tipos agora está vazia: `Views: { [_ in never]: never }`
+
+**Verificação de Funcionalidade:**
+- ✅ Todas as consultas continuam funcionando usando apenas tabelas base
+- ✅ JOINs diretos entre `profiles`, `students`, `classes` e `enrollments`
+- ✅ Nenhuma funcionalidade quebrada após remoção
+- ✅ Performance mantida com queries otimizadas
+
+**Benefícios da Consolidação:**
+- **Simplicidade arquitetural**: sistema usa apenas tabelas base, sem abstrações
+- **Manutenção reduzida**: menos componentes para gerenciar e sincronizar
+- **Recursos liberados**: espaço de armazenamento da view materializada disponível
+- **Transparência**: queries diretas são mais claras que abstrações em views
+
+**Arquitetura Final Após Consolidação:**
+- **Zero views materializadas**: sistema completamente baseado em tabelas
+- **Queries diretas**: todas as consultas usam JOINs explícitos
+- **TypeScript limpo**: tipos refletem estrutura real do banco
+- **Performance preservada**: índices e JOINs otimizados mantêm velocidade
+
 ---
 
 **Mantido por**: Equipe de Desenvolvimento Vila Dança & Arte  
-**Última atualização**: 05/08/2025 - Adição da Fase 8.3 (Limpeza Final de Referências)
+**Última atualização**: 05/08/2025 - Consolidação arquitetural completa com remoção de todas as views materializadas
