@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Breadcrumb,
   BreadcrumbItem,
@@ -16,29 +16,39 @@ import {
   Calendar,
   BarChart3,
   Settings,
-  Palette
+  Palette,
+  Plus,
+  UserCog
 } from 'lucide-react';
 
-const breadcrumbMap: Record<string, { label: string; icon?: any }> = {
+const breadcrumbMap: Record<string, { label: string; icon?: React.ComponentType<{ className?: string }> }> = {
   '/admin': { label: 'Admin', icon: Home },
   '/admin/dashboard': { label: 'Dashboard', icon: Home },
   '/admin/students': { label: 'Alunos', icon: Users },
   '/admin/teachers': { label: 'Professores', icon: GraduationCap },
   '/admin/classes': { label: 'Turmas', icon: BookOpen },
+  '/admin/classes/new': { label: 'Nova Turma', icon: Plus },
   '/admin/class-types': { label: 'Modalidades', icon: Palette },
   '/admin/finance': { label: 'Financeiro', icon: DollarSign },
   '/admin/events': { label: 'Eventos', icon: Calendar },
   '/admin/reports': { label: 'Relatórios', icon: BarChart3 },
   '/admin/settings': { label: 'Configurações', icon: Settings },
+  '/admin/user-roles': { label: 'Gerenciar Funções', icon: UserCog },
 };
 
 export function AdminBreadcrumb() {
   const location = useLocation();
+  const navigate = useNavigate();
   const pathSegments = location.pathname.split('/').filter(Boolean);
   
   const breadcrumbItems = pathSegments.map((segment, index) => {
     const path = '/' + pathSegments.slice(0, index + 1).join('/');
-    const breadcrumbInfo = breadcrumbMap[path];
+    let breadcrumbInfo = breadcrumbMap[path];
+    
+    // Handle dynamic routes like /admin/students/:id
+    if (!breadcrumbInfo && path.includes('/admin/students/') && path.split('/').length === 4) {
+      breadcrumbInfo = { label: 'Detalhes do Aluno', icon: Users };
+    }
     
     if (!breadcrumbInfo) return null;
     
@@ -53,7 +63,10 @@ export function AdminBreadcrumb() {
             {breadcrumbInfo.label}
           </BreadcrumbPage>
         ) : (
-          <BreadcrumbLink href={path} className="flex items-center gap-2">
+          <BreadcrumbLink 
+            onClick={() => navigate(path)} 
+            className="flex items-center gap-2 cursor-pointer"
+          >
             {Icon && <Icon className="h-4 w-4" />}
             {breadcrumbInfo.label}
           </BreadcrumbLink>
