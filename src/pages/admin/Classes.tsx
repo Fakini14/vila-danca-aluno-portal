@@ -61,7 +61,6 @@ interface ClassData {
   horario_fim: string;
   tempo_total_minutos: number;
   sala: string | null;
-  capacidade_maxima: number | null;
   valor_aula: number;
   valor_matricula: number | null;
   ativa: boolean;
@@ -227,7 +226,7 @@ export default function Classes() {
       render: (value, classData) => (
         <div className="flex items-center gap-2 text-sm">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span>{value || 0}/{classData.capacidade_maxima || '∞'}</span>
+          <span>{value || 0}/20</span>
         </div>
       )
     },
@@ -598,7 +597,7 @@ export default function Classes() {
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{turma.active_enrollments || 0}/{turma.capacidade_maxima || '∞'}</span>
+                    <span>{turma.active_enrollments || 0}/20</span>
                   </div>
                   <Badge variant={turma.ativa ? 'default' : 'secondary'}>
                     {turma.ativa ? 'Ativa' : 'Inativa'}

@@ -87,7 +87,7 @@ export type Database = {
             foreignKeyName: "class_teachers_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
-            referencedRelation: "staff"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -125,7 +125,6 @@ export type Database = {
       classes: {
         Row: {
           ativa: boolean
-          capacidade_maxima: number | null
           created_at: string
           data_inicio: string
           data_termino: string | null
@@ -138,7 +137,6 @@ export type Database = {
           nome: string | null
           observacoes: string | null
           professor_principal_id: string | null
-          sala: string | null
           tempo_total_minutos: number
           tipo: Database["public"]["Enums"]["tipo_turma"]
           updated_at: string
@@ -147,7 +145,6 @@ export type Database = {
         }
         Insert: {
           ativa?: boolean
-          capacidade_maxima?: number | null
           created_at?: string
           data_inicio: string
           data_termino?: string | null
@@ -160,7 +157,6 @@ export type Database = {
           nome?: string | null
           observacoes?: string | null
           professor_principal_id?: string | null
-          sala?: string | null
           tempo_total_minutos: number
           tipo: Database["public"]["Enums"]["tipo_turma"]
           updated_at?: string
@@ -169,7 +165,6 @@ export type Database = {
         }
         Update: {
           ativa?: boolean
-          capacidade_maxima?: number | null
           created_at?: string
           data_inicio?: string
           data_termino?: string | null
@@ -182,7 +177,6 @@ export type Database = {
           nome?: string | null
           observacoes?: string | null
           professor_principal_id?: string | null
-          sala?: string | null
           tempo_total_minutos?: number
           tipo?: Database["public"]["Enums"]["tipo_turma"]
           updated_at?: string
@@ -194,7 +188,7 @@ export type Database = {
             foreignKeyName: "classes_professor_principal_id_fkey"
             columns: ["professor_principal_id"]
             isOneToOne: false
-            referencedRelation: "staff"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -243,6 +237,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students_with_enrollments"
             referencedColumns: ["id"]
           },
         ]
@@ -298,8 +299,7 @@ export type Database = {
       profiles: {
         Row: {
           cep: string | null
-          cidade: string | null
-          contato_emergencia: string | null
+          chave_pix: string | null
           cpf: string
           created_at: string
           data_nascimento: string | null
@@ -307,22 +307,19 @@ export type Database = {
           email_confirmation_sent_at: string | null
           email_confirmation_token: string | null
           email_confirmed: boolean | null
-          endereco: string | null
-          estado: string | null
+          endereco_completo: string | null
           id: string
-          informacoes_medicas: string | null
           nome_completo: string
           observacoes: string | null
           role: Database["public"]["Enums"]["user_role"]
+          sexo: Database["public"]["Enums"]["sexo"] | null
           status: Database["public"]["Enums"]["user_status"]
-          telefone_emergencia: string | null
           updated_at: string
           whatsapp: string
         }
         Insert: {
           cep?: string | null
-          cidade?: string | null
-          contato_emergencia?: string | null
+          chave_pix?: string | null
           cpf: string
           created_at?: string
           data_nascimento?: string | null
@@ -330,22 +327,19 @@ export type Database = {
           email_confirmation_sent_at?: string | null
           email_confirmation_token?: string | null
           email_confirmed?: boolean | null
-          endereco?: string | null
-          estado?: string | null
+          endereco_completo?: string | null
           id: string
-          informacoes_medicas?: string | null
           nome_completo: string
           observacoes?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          sexo?: Database["public"]["Enums"]["sexo"] | null
           status?: Database["public"]["Enums"]["user_status"]
-          telefone_emergencia?: string | null
           updated_at?: string
           whatsapp: string
         }
         Update: {
           cep?: string | null
-          cidade?: string | null
-          contato_emergencia?: string | null
+          chave_pix?: string | null
           cpf?: string
           created_at?: string
           data_nascimento?: string | null
@@ -353,103 +347,60 @@ export type Database = {
           email_confirmation_sent_at?: string | null
           email_confirmation_token?: string | null
           email_confirmed?: boolean | null
-          endereco?: string | null
-          estado?: string | null
+          endereco_completo?: string | null
           id?: string
-          informacoes_medicas?: string | null
           nome_completo?: string
           observacoes?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          sexo?: Database["public"]["Enums"]["sexo"] | null
           status?: Database["public"]["Enums"]["user_status"]
-          telefone_emergencia?: string | null
           updated_at?: string
           whatsapp?: string
         }
         Relationships: []
       }
-      staff: {
-        Row: {
-          chave_pix: string | null
-          created_at: string
-          dados_bancarios: Json | null
-          especialidades: string[] | null
-          funcao: Database["public"]["Enums"]["user_role"]
-          id: string
-          observacoes: string | null
-          taxa_comissao: number | null
-          updated_at: string
-        }
-        Insert: {
-          chave_pix?: string | null
-          created_at?: string
-          dados_bancarios?: Json | null
-          especialidades?: string[] | null
-          funcao: Database["public"]["Enums"]["user_role"]
-          id: string
-          observacoes?: string | null
-          taxa_comissao?: number | null
-          updated_at?: string
-        }
-        Update: {
-          chave_pix?: string | null
-          created_at?: string
-          dados_bancarios?: Json | null
-          especialidades?: string[] | null
-          funcao?: Database["public"]["Enums"]["user_role"]
-          id?: string
-          observacoes?: string | null
-          taxa_comissao?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "staff_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       students: {
         Row: {
+          asaas_customer_id: string | null
           auth_status: string
+          cep: string | null
           created_at: string
           data_nascimento: string | null
+          email: string | null
           endereco_completo: string | null
           id: string
           parceiro_id: string | null
-          responsavel_email: string | null
-          responsavel_nome: string | null
-          responsavel_telefone: string | null
           sexo: Database["public"]["Enums"]["sexo"]
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
+          asaas_customer_id?: string | null
           auth_status?: string
+          cep?: string | null
           created_at?: string
           data_nascimento?: string | null
+          email?: string | null
           endereco_completo?: string | null
           id: string
           parceiro_id?: string | null
-          responsavel_email?: string | null
-          responsavel_nome?: string | null
-          responsavel_telefone?: string | null
           sexo: Database["public"]["Enums"]["sexo"]
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
+          asaas_customer_id?: string | null
           auth_status?: string
+          cep?: string | null
           created_at?: string
           data_nascimento?: string | null
+          email?: string | null
           endereco_completo?: string | null
           id?: string
           parceiro_id?: string | null
-          responsavel_email?: string | null
-          responsavel_nome?: string | null
-          responsavel_telefone?: string | null
           sexo?: Database["public"]["Enums"]["sexo"]
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -468,9 +419,165 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          asaas_payment_id: string
+          bank_slip_url: string | null
+          created_at: string | null
+          due_date: string
+          id: string
+          invoice_url: string | null
+          paid_date: string | null
+          payment_method: string | null
+          pix_qr_code: string | null
+          status: string
+          subscription_id: string
+        }
+        Insert: {
+          amount: number
+          asaas_payment_id: string
+          bank_slip_url?: string | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          invoice_url?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          pix_qr_code?: string | null
+          status: string
+          subscription_id: string
+        }
+        Update: {
+          amount?: number
+          asaas_payment_id?: string
+          bank_slip_url?: string | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          invoice_url?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          asaas_customer_id: string
+          asaas_subscription_id: string
+          billing_type: string
+          cancelled_at: string | null
+          created_at: string | null
+          cycle: string | null
+          enrollment_id: string
+          id: string
+          next_due_date: string
+          paused_at: string | null
+          reactivated_at: string | null
+          status: string
+          student_id: string
+          updated_at: string | null
+          value: number
+        }
+        Insert: {
+          asaas_customer_id: string
+          asaas_subscription_id: string
+          billing_type: string
+          cancelled_at?: string | null
+          created_at?: string | null
+          cycle?: string | null
+          enrollment_id: string
+          id?: string
+          next_due_date: string
+          paused_at?: string | null
+          reactivated_at?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string | null
+          value: number
+        }
+        Update: {
+          asaas_customer_id?: string
+          asaas_subscription_id?: string
+          billing_type?: string
+          cancelled_at?: string | null
+          created_at?: string | null
+          cycle?: string | null
+          enrollment_id?: string
+          id?: string
+          next_due_date?: string
+          paused_at?: string | null
+          reactivated_at?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: true
+            referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students_with_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      students_with_enrollments: {
+        Row: {
+          active_enrollments: number | null
+          auth_status: string | null
+          cep: string | null
+          created_at: string | null
+          data_nascimento: string | null
+          email: string | null
+          endereco_completo: string | null
+          id: string | null
+          nome_completo: string | null
+          profile_email: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          sexo: Database["public"]["Enums"]["sexo"] | null
+          total_enrollments: number | null
+          updated_at: string | null
+          whatsapp: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       ensure_student_record: {
@@ -480,6 +587,14 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_role_cached: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      refresh_materialized_view: {
+        Args: { view_name: string }
+        Returns: undefined
       }
     }
     Enums: {

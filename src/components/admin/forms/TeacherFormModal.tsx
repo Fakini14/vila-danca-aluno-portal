@@ -23,31 +23,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { X, Plus } from 'lucide-react';
 
 const teacherFormSchema = z.object({
   email: z.string().email('Email inválido'),
   nome_completo: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   cpf: z.string().min(11, 'CPF deve ter 11 dígitos'),
   whatsapp: z.string().min(10, 'WhatsApp deve ter pelo menos 10 dígitos'),
-  especialidades: z.array(z.string()).min(1, 'Selecione pelo menos uma especialidade'),
-  taxa_comissao: z.number().min(0).max(100).optional(),
   chave_pix: z.string().optional(),
-  dados_bancarios: z.object({
-    banco: z.string().optional(),
-    agencia: z.string().optional(),
-    conta: z.string().optional(),
-    tipo_conta: z.string().optional(),
-  }).optional(),
   observacoes: z.string().optional(),
 });
 
@@ -62,10 +44,7 @@ interface Teacher {
     cpf: string;
     status: string;
   };
-  especialidades: string[] | null;
-  taxa_comissao: number | null;
   chave_pix: string | null;
-  dados_bancarios: any;
   observacoes: string | null;
 }
 
@@ -76,22 +55,9 @@ interface TeacherFormModalProps {
   onSuccess: () => void;
 }
 
-const getModalityOptions = () => [
-  'Ballet',
-  'Jazz',
-  'Contemporâneo',
-  'Hip Hop',
-  'Dança de Salão',
-  'Sapateado',
-  'Teatro Musical',
-  'Dança do Ventre',
-  'Zumba',
-  'Fitness Dance'
-];
 
 export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherFormModalProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<TeacherFormData>({
@@ -101,15 +67,7 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
       nome_completo: '',
       cpf: '',
       whatsapp: '',
-      especialidades: [],
-      taxa_comissao: 0,
       chave_pix: '',
-      dados_bancarios: {
-        banco: '',
-        agencia: '',
-        conta: '',
-        tipo_conta: 'corrente',
-      },
       observacoes: '',
     },
   });
@@ -121,21 +79,11 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
         nome_completo: teacher.profiles.nome_completo,
         cpf: teacher.profiles.cpf || '',
         whatsapp: teacher.profiles.whatsapp,
-        especialidades: teacher.especialidades || [],
-        taxa_comissao: teacher.taxa_comissao || 0,
         chave_pix: teacher.chave_pix || '',
-        dados_bancarios: teacher.dados_bancarios || {
-          banco: '',
-          agencia: '',
-          conta: '',
-          tipo_conta: 'corrente',
-        },
         observacoes: teacher.observacoes || '',
       });
-      setSelectedSpecialties(teacher.especialidades || []);
     } else {
       form.reset();
-      setSelectedSpecialties([]);
     }
   }, [teacher, form]);
 
@@ -152,23 +100,13 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
             cpf: data.cpf,
             whatsapp: data.whatsapp,
             email: data.email,
-          })
-          .eq('id', teacher.id);
-
-        if (profileError) throw profileError;
-
-        const { error: staffError } = await supabase
-          .from('staff')
-          .update({
-            especialidades: data.especialidades,
-            taxa_comissao: data.taxa_comissao,
             chave_pix: data.chave_pix,
-            dados_bancarios: data.dados_bancarios,
             observacoes: data.observacoes,
           })
-          .eq('id', teacher.id);
+          .eq('id', teacher.id)
+          .eq('role', 'professor');
 
-        if (staffError) throw staffError;
+        if (profileError) throw profileError;
 
         toast({
           title: "Professor atualizado",
@@ -191,20 +129,22 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
 
         if (authError) throw authError;
 
-        // Criar entrada na tabela staff
-        const { error: staffError } = await supabase
-          .from('staff')
+        // Criar entrada na tabela profiles
+        const { error: profileInsertError } = await supabase
+          .from('profiles')
           .insert({
             id: authData.user.id,
-            funcao: 'professor',
-            especialidades: data.especialidades,
-            taxa_comissao: data.taxa_comissao,
+            nome_completo: data.nome_completo,
+            cpf: data.cpf,
+            whatsapp: data.whatsapp,
+            email: data.email,
+            role: 'professor',
+            status: 'ativo',
             chave_pix: data.chave_pix,
-            dados_bancarios: data.dados_bancarios,
             observacoes: data.observacoes,
           });
 
-        if (staffError) throw staffError;
+        if (profileInsertError) throw profileInsertError;
 
         toast({
           title: "Professor criado",
@@ -224,14 +164,6 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
     }
   };
 
-  const handleSpecialtyToggle = (specialty: string) => {
-    const newSpecialties = selectedSpecialties.includes(specialty)
-      ? selectedSpecialties.filter(s => s !== specialty)
-      : [...selectedSpecialties, specialty];
-    
-    setSelectedSpecialties(newSpecialties);
-    form.setValue('especialidades', newSpecialties);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -320,168 +252,27 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
               </div>
             </div>
 
-            {/* Especialidades */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Especialidades</h3>
-              <FormField
-                control={form.control}
-                name="especialidades"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Modalidades que ensina *</FormLabel>
-                    <FormDescription>
-                      Selecione todas as modalidades que o professor pode ensinar
-                    </FormDescription>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {getModalityOptions().map((specialty) => (
-                        <div key={specialty} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={specialty}
-                            checked={selectedSpecialties.includes(specialty)}
-                            onCheckedChange={() => handleSpecialtyToggle(specialty)}
-                          />
-                          <label
-                            htmlFor={specialty}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {specialty}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {selectedSpecialties.map((specialty) => (
-                        <Badge key={specialty} variant="secondary" className="text-xs">
-                          {specialty}
-                          <button
-                            type="button"
-                            onClick={() => handleSpecialtyToggle(specialty)}
-                            className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             {/* Dados Financeiros */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Dados Financeiros</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="taxa_comissao"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Taxa de Comissão (%)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          max="100" 
-                          step="0.01"
-                          placeholder="0.00" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Percentual de comissão sobre as aulas
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="chave_pix"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Chave PIX</FormLabel>
-                      <FormControl>
-                        <Input placeholder="CPF, email ou telefone" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Para pagamento de comissões
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Dados Bancários */}
-              <div className="space-y-3">
-                <h4 className="font-medium">Dados Bancários (Opcional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="dados_bancarios.banco"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Banco</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nome do banco" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="dados_bancarios.tipo_conta"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo de Conta</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o tipo" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="corrente">Corrente</SelectItem>
-                            <SelectItem value="poupanca">Poupança</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="dados_bancarios.agencia"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Agência</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0000" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="dados_bancarios.conta"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Conta</FormLabel>
-                        <FormControl>
-                          <Input placeholder="00000-0" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+              <FormField
+                control={form.control}
+                name="chave_pix"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chave PIX</FormLabel>
+                    <FormControl>
+                      <Input placeholder="CPF, email ou telefone" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Para pagamento de comissões
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Observações */}

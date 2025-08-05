@@ -12,8 +12,6 @@ export interface Class {
   horario_inicio: string;
   horario_fim: string;
   tempo_total_minutos: number;
-  sala: string;
-  capacidade_maxima: number;
   valor_aula: number;
   valor_matricula: number;
   professor_principal_id: string;
@@ -40,15 +38,13 @@ export function useClasses() {
           dias_semana,
           horario_inicio,
           horario_fim,
-          sala,
-          capacidade_maxima,
           valor_aula,
           valor_matricula,
           ativa,
           professor_principal_id,
           created_at,
           tipo,
-          staff(profiles(nome_completo))
+          profiles!classes_professor_principal_id_fkey(nome_completo)
         `)
         .order('modalidade');
       
@@ -69,7 +65,7 @@ export function useActiveClasses() {
         .from('classes')
         .select(`
           *,
-          staff(profiles(nome_completo))
+          profiles!classes_professor_principal_id_fkey(nome_completo)
         `)
         .eq('ativa', true)
         .order('modalidade');
@@ -89,7 +85,7 @@ export function useClass(id: string) {
         .from('classes')
         .select(`
           *,
-          staff(profiles(nome_completo, email)),
+          profiles!classes_professor_principal_id_fkey(nome_completo, email),
           enrollments(
             *,
             students(profiles(nome_completo, whatsapp))
@@ -149,7 +145,7 @@ export function useTodayClasses() {
         .from('classes')
         .select(`
           *,
-          staff(profiles(nome_completo))
+          profiles!classes_professor_principal_id_fkey(nome_completo)
         `)
         .contains('dias_semana', [dayMapping[today]])
         .eq('ativa', true)
@@ -227,15 +223,13 @@ export function useClassesWithEnrollmentCount() {
           dias_semana,
           horario_inicio,
           horario_fim,
-          sala,
-          capacidade_maxima,
           valor_aula,
           valor_matricula,
           ativa,
           professor_principal_id,
           created_at,
           tipo,
-          staff(profiles(nome_completo)),
+          profiles!classes_professor_principal_id_fkey(nome_completo),
           enrollments!inner(id)
         `)
         .order('modalidade');

@@ -55,8 +55,6 @@ export function ClassFormModal({ open, onClose, classData, onSuccess }: ClassFor
       horario_inicio: '09:00',
       horario_fim: '10:00',
       tempo_total_minutos: 60,
-      sala: null,
-      capacidade_maxima: 20,
       valor_aula: data.valor_aula,
       valor_matricula: null,
       professor_principal_id: null,

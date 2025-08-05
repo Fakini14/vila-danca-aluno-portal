@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   GraduationCap, 
   Plus, 
@@ -11,13 +10,6 @@ import {
   Phone,
   DollarSign
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
 import { useTeachersOptimized } from '@/hooks/useOptimizedQueries';
 import { useDeactivateTeacher } from '@/hooks/useTeachers';
@@ -29,9 +21,6 @@ interface TeacherData {
   email: string;
   role: string;
   funcao: string;
-  especialidades: string[];
-  taxa_comissao: number;
-  dados_bancarios: any;
   chave_pix: string;
   observacoes: string;
   created_at: string;
@@ -42,21 +31,8 @@ interface TeacherData {
 }
 
 
-const getModalityOptions = () => [
-  'Ballet',
-  'Jazz',
-  'Contemporâneo',
-  'Hip Hop',
-  'Dança de Salão',
-  'Sapateado',
-  'Teatro Musical',
-  'Dança do Ventre',
-  'Zumba',
-  'Fitness Dance'
-];
 
 export default function Teachers() {
-  const [modalityFilter, setModalityFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherData | null>(null);
   
@@ -79,11 +55,6 @@ export default function Teachers() {
     }
   };
 
-  // Filter teachers by modality
-  const filteredTeachers = teachers.filter(teacher => {
-    if (modalityFilter === 'all') return true;
-    return teacher.especialidades?.includes(modalityFilter);
-  });
 
   // Define table columns
   const columns: Column<TeacherData>[] = [
@@ -99,36 +70,6 @@ export default function Teachers() {
             <p className="font-medium">{value}</p>
             <p className="text-sm text-muted-foreground">{teacher.email}</p>
           </div>
-        </div>
-      )
-    },
-    {
-      key: 'especialidades',
-      title: 'Especialidades',
-      render: (value) => (
-        <div className="flex flex-wrap gap-1">
-          {value?.slice(0, 2).map((especialidade: string, index: number) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {especialidade}
-            </Badge>
-          )) || <span className="text-xs text-muted-foreground">Não informado</span>}
-          {value?.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{value.length - 2}
-            </Badge>
-          )}
-        </div>
-      )
-    },
-    {
-      key: 'taxa_comissao',
-      title: 'Comissão',
-      render: (value) => (
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">
-            {value ? `${value}%` : 'Não definida'}
-          </span>
         </div>
       )
     },
@@ -185,7 +126,6 @@ export default function Teachers() {
 
   // Calculate statistics
   const activeTeachers = teachers.filter(t => t.role === 'professor').length;
-  const totalSpecialties = new Set(teachers.flatMap(t => t.especialidades || [])).size;
 
   if (error) {
     return (
@@ -245,7 +185,7 @@ export default function Teachers() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Especialidades</CardTitle>
+            <CardTitle className="text-sm font-medium">Turmas Ativas</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -256,35 +196,9 @@ export default function Teachers() {
               </>
             ) : (
               <>
-                <div className="text-2xl font-bold">{totalSpecialties}</div>
+                <div className="text-2xl font-bold">{teachers.reduce((acc, t) => acc + (t.active_classes || 0), 0)}</div>
                 <p className="text-xs text-muted-foreground">
-                  modalidades oferecidas
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Média de Comissão</CardTitle>
-            <Phone className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <>
-                <div className="h-8 w-14 bg-muted animate-pulse rounded"></div>
-                <div className="h-4 w-24 bg-muted animate-pulse rounded mt-1"></div>
-              </>
-            ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {teachers.length > 0 
-                    ? Math.round(teachers.reduce((acc, t) => acc + (t.taxa_comissao || 0), 0) / teachers.length)
-                    : 0}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  comissão média
+                  turmas sendo ministradas
                 </p>
               </>
             )}
@@ -294,29 +208,14 @@ export default function Teachers() {
 
       {/* Teachers Table with DataTable */}
       <DataTable
-        data={filteredTeachers}
+        data={teachers}
         columns={columns}
         actions={actions}
         title="Lista de Professores"
-        description="Gerencie a equipe de professores e suas especialidades"
+        description="Gerencie a equipe de professores da escola"
         searchPlaceholder="Buscar por nome..."
         isLoading={isLoading}
         emptyMessage="Nenhum professor cadastrado"
-        renderFilters={() => (
-          <Select value={modalityFilter} onValueChange={setModalityFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filtrar por modalidade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as modalidades</SelectItem>
-              {getModalityOptions().map((modality) => (
-                <SelectItem key={modality} value={modality}>
-                  {modality}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
       />
 
       {/* Modal de Formulário */}

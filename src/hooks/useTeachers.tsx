@@ -4,17 +4,13 @@ import { toast } from 'sonner';
 
 export interface Teacher {
   id: string;
-  profile_id: string;
-  especialidades: string[];
-  taxa_comissao: number;
-  chave_pix: string;
-  dados_bancarios: {
-    banco: string;
-    agencia: string;
-    conta: string;
-    tipo_conta: string;
-  } | null;
-  ativo: boolean;
+  nome_completo: string;
+  email: string;
+  cpf: string;
+  whatsapp: string;
+  chave_pix: string | null;
+  role: string;
+  status: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,20 +21,21 @@ export function useTeachers() {
     queryKey: ['teachers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('staff')
+        .from('profiles')
         .select(`
           id,
-          profile_id,
-          especialidades,
-          taxa_comissao,
+          nome_completo,
+          email,
+          cpf,
+          whatsapp,
           chave_pix,
-          dados_bancarios,
-          ativo,
+          role,
+          status,
           created_at,
-          updated_at,
-          profiles(nome_completo, email, role)
+          updated_at
         `)
-        .eq('profiles.role', 'professor')
+        .eq('role', 'professor')
+        .eq('status', 'ativo')
         .order('nome_completo');
       
       if (error) throw error;
@@ -55,13 +52,10 @@ export function useActiveTeachers() {
     queryKey: ['teachers', 'active'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('staff')
-        .select(`
-          *,
-          profiles(nome_completo, email, role)
-        `)
-        .eq('profiles.role', 'professor')
-        .eq('ativo', true)
+        .from('profiles')
+        .select('*')
+        .eq('role', 'professor')
+        .eq('status', 'ativo')
         .order('nome_completo');
       
       if (error) throw error;
@@ -76,11 +70,10 @@ export function useTeacher(id: string) {
     queryKey: ['teachers', id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('staff')
+        .from('profiles')
         .select(`
           *,
-          profiles(nome_completo, email, role),
-          classes(
+          classes!classes_professor_principal_id_fkey(
             id,
             nome,
             modalidade,
@@ -90,6 +83,7 @@ export function useTeacher(id: string) {
           )
         `)
         .eq('id', id)
+        .eq('role', 'professor')
         .single();
       
       if (error) throw error;
@@ -112,7 +106,7 @@ export function useTeacherCommissions(teacherId: string, month?: string, year?: 
             nome,
             modalidade,
             valor_aula,
-            staff(taxa_comissao)
+            class_teachers!class_teachers_teacher_id_fkey(comissao_percentual)
           ),
           students(profiles(nome_completo))
         `)
@@ -144,42 +138,25 @@ export function useCreateTeacher() {
       nome_completo: string;
       cpf: string;
       whatsapp: string;
-      especialidades: string[];
-      taxa_comissao?: number;
       chave_pix?: string;
-      dados_bancarios?: any;
     }) => {
-      // First create profile
+      // Create profile with all teacher data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert([{
           email: teacherData.email,
           nome_completo: teacherData.nome_completo,
-          role: 'professor'
+          cpf: teacherData.cpf,
+          whatsapp: teacherData.whatsapp,
+          role: 'professor',
+          status: 'ativo',
+          chave_pix: teacherData.chave_pix
         }])
         .select()
         .single();
       
       if (profileError) throw profileError;
-
-      // Then create staff record
-      const { data: staff, error: staffError } = await supabase
-        .from('staff')
-        .insert([{
-          profile_id: profile.id,
-          cpf: teacherData.cpf,
-          whatsapp: teacherData.whatsapp,
-          especialidades: teacherData.especialidades,
-          taxa_comissao: teacherData.taxa_comissao || 50,
-          chave_pix: teacherData.chave_pix,
-          dados_bancarios: teacherData.dados_bancarios,
-          ativo: true
-        }])
-        .select()
-        .single();
-      
-      if (staffError) throw staffError;
-      return staff;
+      return profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
@@ -198,9 +175,10 @@ export function useUpdateTeacher() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Teacher> }) => {
       const { data: result, error } = await supabase
-        .from('staff')
+        .from('profiles')
         .update(data)
         .eq('id', id)
+        .eq('role', 'professor')
         .select()
         .single();
       
@@ -224,9 +202,10 @@ export function useDeactivateTeacher() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('staff')
-        .update({ ativo: false })
-        .eq('id', id);
+        .from('profiles')
+        .update({ status: 'inativo' })
+        .eq('id', id)
+        .eq('role', 'professor');
       
       if (error) throw error;
     },

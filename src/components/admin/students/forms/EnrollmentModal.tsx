@@ -19,7 +19,6 @@ interface AvailableClass {
   dias_semana: string[];
   horario_inicio: string;
   horario_fim: string;
-  capacidade_maxima: number;
   current_enrollments: number;
   class_type: {
     id: string;
@@ -88,10 +87,8 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             color
           ),
           class_teachers(
-            staff(
-              profiles(
-                nome_completo
-              )
+            profiles(
+              nome_completo
             )
           )
         `)
@@ -122,7 +119,6 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
           dias_semana: cls.dias_semana,
           horario_inicio: cls.horario_inicio,
           horario_fim: cls.horario_fim,
-          capacidade_maxima: cls.capacidade_maxima,
           current_enrollments: enrollmentCountMap[cls.id] || 0,
           class_type: {
             id: cls.class_types?.id || '',
@@ -130,7 +126,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             color: cls.class_types?.color || '#6366f1',
           },
           teacher: {
-            nome_completo: cls.class_teachers?.[0]?.staff?.profiles?.nome_completo || 'Professor não definido',
+            nome_completo: cls.class_teachers?.[0]?.profiles?.nome_completo || 'Professor não definido',
           },
         })) || [];
 
@@ -410,7 +406,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
                     {availableClasses.map((cls) => {
                       const isSelected = selectedClasses.includes(cls.id);
                       const hasConflict = !isSelected && checkForScheduleConflicts(cls.id);
-                      const isFull = cls.current_enrollments >= cls.capacidade_maxima;
+                      const isFull = cls.current_enrollments >= 20;
                       const isDisabled = hasConflict || isFull;
 
                       return (
@@ -476,7 +472,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
                                 
                                 <div className="flex items-center gap-2">
                                   <Users className="h-4 w-4" />
-                                  <span>{cls.current_enrollments}/{cls.capacidade_maxima} alunos</span>
+                                  <span>{cls.current_enrollments}/20 alunos</span>
                                 </div>
                               </div>
 

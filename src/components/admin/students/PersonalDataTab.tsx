@@ -22,9 +22,7 @@ interface StudentDetails {
   sexo: 'masculino' | 'feminino' | 'outro';
   data_nascimento: string | null;
   endereco_completo: string | null;
-  responsavel_nome: string | null;
-  responsavel_telefone: string | null;
-  responsavel_email: string | null;
+  cep: string | null;
   email_confirmed: boolean;
 }
 
@@ -44,9 +42,7 @@ export function PersonalDataTab({ student, onStudentUpdate }: PersonalDataTabPro
     sexo: student.sexo,
     data_nascimento: student.data_nascimento || '',
     endereco_completo: student.endereco_completo || '',
-    responsavel_nome: student.responsavel_nome || '',
-    responsavel_telefone: student.responsavel_telefone || '',
-    responsavel_email: student.responsavel_email || '',
+    cep: student.cep || '',
   });
   const { toast } = useToast();
 
@@ -63,9 +59,7 @@ export function PersonalDataTab({ student, onStudentUpdate }: PersonalDataTabPro
       sexo: student.sexo,
       data_nascimento: student.data_nascimento || '',
       endereco_completo: student.endereco_completo || '',
-      responsavel_nome: student.responsavel_nome || '',
-      responsavel_telefone: student.responsavel_telefone || '',
-      responsavel_email: student.responsavel_email || '',
+      cep: student.cep || '',
     });
     setEditing(false);
   };
@@ -94,9 +88,7 @@ export function PersonalDataTab({ student, onStudentUpdate }: PersonalDataTabPro
           sexo: formData.sexo,
           data_nascimento: formData.data_nascimento || null,
           endereco_completo: formData.endereco_completo || null,
-          responsavel_nome: formData.responsavel_nome || null,
-          responsavel_telefone: formData.responsavel_telefone || null,
-          responsavel_email: formData.responsavel_email || null,
+          cep: formData.cep || null,
         })
         .eq('id', student.id);
 
@@ -296,70 +288,25 @@ export function PersonalDataTab({ student, onStudentUpdate }: PersonalDataTabPro
                 </p>
               )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Responsável */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Responsável / Contato de Emergência
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="responsavel_nome">Nome do Responsável</Label>
-                {editing ? (
-                  <Input
-                    id="responsavel_nome"
-                    value={formData.responsavel_nome}
-                    onChange={(e) => setFormData({ ...formData, responsavel_nome: e.target.value })}
-                    placeholder="Nome completo..."
-                  />
-                ) : (
-                  <p className="text-sm font-medium mt-1">
-                    {student.responsavel_nome || 'Não informado'}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="responsavel_telefone">Telefone</Label>
-                {editing ? (
-                  <Input
-                    id="responsavel_telefone"
-                    value={formData.responsavel_telefone}
-                    onChange={(e) => setFormData({ ...formData, responsavel_telefone: e.target.value })}
-                    placeholder="(00) 00000-0000"
-                  />
-                ) : (
-                  <p className="text-sm font-medium mt-1">
-                    {student.responsavel_telefone || 'Não informado'}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="responsavel_email">Email</Label>
-                {editing ? (
-                  <Input
-                    id="responsavel_email"
-                    type="email"
-                    value={formData.responsavel_email}
-                    onChange={(e) => setFormData({ ...formData, responsavel_email: e.target.value })}
-                    placeholder="email@exemplo.com"
-                  />
-                ) : (
-                  <p className="text-sm font-medium mt-1">
-                    {student.responsavel_email || 'Não informado'}
-                  </p>
-                )}
-              </div>
+            <div>
+              <Label htmlFor="cep">CEP</Label>
+              {editing ? (
+                <Input
+                  id="cep"
+                  value={formData.cep}
+                  onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                  placeholder="00000-000"
+                />
+              ) : (
+                <p className="text-sm font-medium mt-1">
+                  {student.cep || 'Não informado'}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

@@ -79,9 +79,7 @@ export default function Auth() {
     const sexo = formData.get('sexo') as string;
     const data_nascimento = formData.get('data_nascimento') as string;
     const endereco_completo = formData.get('endereco_completo') as string;
-    const responsavel_nome = formData.get('responsavel_nome') as string;
-    const responsavel_telefone = formData.get('responsavel_telefone') as string;
-    const responsavel_email = formData.get('responsavel_email') as string;
+    const cep = formData.get('cep') as string;
 
     const additionalData = userType === 'aluno' ? {
       nome_completo, 
@@ -90,9 +88,7 @@ export default function Auth() {
       sexo,
       data_nascimento,
       endereco_completo,
-      responsavel_nome,
-      responsavel_telefone,
-      responsavel_email,
+      cep,
       role: 'aluno'
     } : {
       nome_completo, 
@@ -326,38 +322,14 @@ export default function Auth() {
                       />
                     </div>
                     
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium mb-3">Responsável / Contato de Emergência (Opcional)</h4>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-resp-nome">Nome do Responsável</Label>
-                        <Input
-                          id="signup-resp-nome"
-                          name="responsavel_nome"
-                          type="text"
-                          placeholder="Nome completo do responsável"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-resp-telefone">Telefone do Responsável</Label>
-                        <Input
-                          id="signup-resp-telefone"
-                          name="responsavel_telefone"
-                          type="text"
-                          placeholder="(00) 00000-0000"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-resp-email">Email do Responsável</Label>
-                        <Input
-                          id="signup-resp-email"
-                          name="responsavel_email"
-                          type="email"
-                          placeholder="email@exemplo.com"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-cep">CEP (Opcional)</Label>
+                      <Input
+                        id="signup-cep"
+                        name="cep"
+                        type="text"
+                        placeholder="00000-000"
+                      />
                     </div>
                   </>
                 )}

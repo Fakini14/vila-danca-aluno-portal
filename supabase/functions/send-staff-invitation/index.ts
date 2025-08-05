@@ -55,20 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Auth user created:', authData.user?.id);
 
-    // Create staff entry if role is not 'aluno'
-    if (role !== 'aluno') {
-      const { error: staffError } = await supabaseClient
-        .from('staff')
-        .insert({
-          id: authData.user!.id,
-          funcao: role,
-        });
-
-      if (staffError) {
-        console.error('Staff error:', staffError);
-        throw staffError;
-      }
-    }
+    // No need to create staff entry - everything is in profiles now
 
     // Update profile with email confirmation details
     const { error: profileError } = await supabaseClient

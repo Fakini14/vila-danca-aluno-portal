@@ -16,9 +16,7 @@ interface StudentDetails {
   sexo: 'masculino' | 'feminino' | 'outro';
   data_nascimento: string | null;
   endereco_completo: string | null;
-  responsavel_nome: string | null;
-  responsavel_telefone: string | null;
-  responsavel_email: string | null;
+  cep: string | null;
   email_confirmed: boolean;
 }
 

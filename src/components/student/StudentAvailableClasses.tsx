@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ interface Class {
   dias_semana: string[];
   valor_aula: number;
   valor_matricula: number | null;
-  capacidade_maxima: number | null;
   ativa: boolean;
   professor_principal_id: string | null;
   sala: string | null;
@@ -41,13 +40,7 @@ export function StudentAvailableClasses() {
   const { toast } = useToast();
   const { profile } = useAuth();
 
-  useEffect(() => {
-    if (profile?.id) {
-      fetchAvailableClasses();
-    }
-  }, [profile?.id]);
-
-  const fetchAvailableClasses = async () => {
+  const fetchAvailableClasses = useCallback(async () => {
     try {
       if (!profile?.id) return;
       
@@ -126,7 +119,13 @@ export function StudentAvailableClasses() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.id, toast]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchAvailableClasses();
+    }
+  }, [fetchAvailableClasses, profile?.id]);
 
   const formatDaysOfWeek = (days: string[]) => {
     const daysMap: { [key: string]: string } = {
@@ -336,7 +335,7 @@ export function StudentAvailableClasses() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {classes.map((classItem) => {
-          const maxCapacity = classItem.capacidade_maxima || 20; // Default capacity
+          const maxCapacity = 20; // Default capacity for all classes
           const isFull = (classItem.current_enrollments || 0) >= maxCapacity;
           const spotsLeft = maxCapacity - (classItem.current_enrollments || 0);
           

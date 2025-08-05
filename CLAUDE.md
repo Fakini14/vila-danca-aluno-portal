@@ -254,10 +254,39 @@ format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 - **UPDATE** this file when completing major features
 - **TEST** enrollment flows thoroughly as they involve payments
 - MCP Server is configured for Supabase integration - use MCP tools when available
-- To check the current development phase, open CLAUDE-ROADMAP.md file.
+- To check the current development phase, open docs/CLAUDE-ROADMAP.md file.
 
-**Important** The CLAUDE-ROADMAP.md file must be updated by the implementation-documenter agent whenever any of the following occurs:
+**Important** The docs/CLAUDE-ROADMAP.md file must be updated by the implementation-documenter agent whenever any of the following occurs:
 - A project milestone is completed
 - Existing functionalities in the codebase are modified
 - The system architecture or underlying technologies are changed
 - New features or components are added
+
+## 📚 Technical Documentation
+
+For detailed technical information, refer to the specialized documentation in the `docs/` folder:
+
+- **[docs/CLAUDE-ROADMAP.md](docs/CLAUDE-ROADMAP.md)** - **MAIN PROJECT ROADMAP** (8/9 phases completed)
+  - Complete development history with detailed phase breakdowns
+  - Links to all related technical documentation
+  - Project status and metrics
+
+- **[docs/auth.md](docs/auth.md)** - Complete authentication system documentation
+  - JWT asymmetric architecture (Phase 8)
+  - Performance optimizations and caching
+  - Security configurations and troubleshooting
+
+- **[docs/ASAAS-SUBSCRIPTION-PLAN.md](docs/ASAAS-SUBSCRIPTION-PLAN.md)** - Payment system integration
+  - Recurring subscription architecture (Phase 6)
+  - Edge functions and webhook automation
+  - Checkout flow and payment methods
+
+- **[docs/PERFORMANCE-OPTIMIZATIONS.md](docs/PERFORMANCE-OPTIMIZATIONS.md)** - Performance improvements
+  - 70-90% performance gains achieved in Phase 3
+  - Database optimizations and materialized views
+  - Frontend caching strategies
+
+- **[docs/MIGRATIONS_TO_RUN.md](docs/MIGRATIONS_TO_RUN.md)** - Database migrations
+  - SQL scripts for Supabase execution
+  - Step-by-step migration instructions
+  - Post-migration verifications

@@ -98,38 +98,61 @@ serve(async (req) => {
     console.log('Creating checkout for enrollment:', data.enrollment_id)
     console.log('Using Asaas URL:', asaasBaseUrl)
 
-    // 1. Buscar ou criar cliente no ASAAS
-    let asaasCustomer
-    
-    // Primeiro tenta buscar por CPF
-    console.log('Searching for existing customer with CPF:', data.customer.cpfCnpj.replace(/\D/g, ''))
-    const searchResponse = await fetch(
-      `${asaasBaseUrl}/customers?cpfCnpj=${data.customer.cpfCnpj.replace(/\D/g, '')}`,
-      {
-        headers: {
-          'access_token': asaasApiKey,
-          'Authorization': `Bearer ${asaasApiKey}`,
-          'Content-Type': 'application/json',
-        }
-      }
-    )
-    
-    console.log('Customer search response:', {
-      status: searchResponse.status,
-      statusText: searchResponse.statusText,
-      ok: searchResponse.ok
-    })
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    if (searchResponse.ok) {
-      const searchResult = await searchResponse.json()
-      if (searchResult.data && searchResult.data.length > 0) {
-        asaasCustomer = searchResult.data[0]
-        console.log('Customer found:', asaasCustomer.id)
-      }
+    // 1. Check if student already has asaas_customer_id
+    console.log('Checking for existing Asaas customer for student:', data.student_id)
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select('asaas_customer_id')
+      .eq('id', data.student_id)
+      .single()
+
+    if (studentError) {
+      console.error('Error fetching student data:', studentError)
+      throw new Error('Failed to fetch student data')
     }
 
-    // Se não encontrou, cria novo cliente
-    if (!asaasCustomer) {
+    let asaasCustomerId = studentData?.asaas_customer_id
+
+    if (asaasCustomerId) {
+      console.log('Using existing Asaas customer:', asaasCustomerId)
+    } else {
+      console.log('No existing Asaas customer found, creating new one...')
+      
+      // Primeiro tenta buscar por CPF (para clientes criados antes da otimização)
+      console.log('Searching for existing customer with CPF:', data.customer.cpfCnpj.replace(/\D/g, ''))
+      const searchResponse = await fetch(
+        `${asaasBaseUrl}/customers?cpfCnpj=${data.customer.cpfCnpj.replace(/\D/g, '')}`,
+        {
+          headers: {
+            'access_token': asaasApiKey,
+            'Authorization': `Bearer ${asaasApiKey}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+      
+      console.log('Customer search response:', {
+        status: searchResponse.status,
+        statusText: searchResponse.statusText,
+        ok: searchResponse.ok
+      })
+
+      let asaasCustomer
+      if (searchResponse.ok) {
+        const searchResult = await searchResponse.json()
+        if (searchResult.data && searchResult.data.length > 0) {
+          asaasCustomer = searchResult.data[0]
+          console.log('Customer found:', asaasCustomer.id)
+        }
+      }
+
+      // Se não encontrou, cria novo cliente
+      if (!asaasCustomer) {
       console.log('Creating new customer:', {
         name: data.customer.name,
         email: data.customer.email,
@@ -187,8 +210,24 @@ serve(async (req) => {
         throw new Error(`Asaas Customer Error (${customerResponse.status}): ${specificError}`)
       }
 
-      asaasCustomer = await customerResponse.json()
-      console.log('Customer created:', asaasCustomer.id)
+        asaasCustomer = await customerResponse.json()
+        console.log('Customer created:', asaasCustomer.id)
+      }
+
+      asaasCustomerId = asaasCustomer.id
+
+      // Save the asaas_customer_id to students table for future use
+      const { error: updateError } = await supabase
+        .from('students')
+        .update({ asaas_customer_id: asaasCustomerId })
+        .eq('id', data.student_id)
+
+      if (updateError) {
+        console.error('Warning: Failed to save asaas_customer_id to student record:', updateError)
+        // Don't fail the checkout, just log the warning
+      } else {
+        console.log('Saved asaas_customer_id to student record for future use')
+      }
     }
 
     // 2. Calcular datas da assinatura
@@ -319,7 +358,7 @@ serve(async (req) => {
         enrollment_id: data.enrollment_id,
         student_id: data.student_id,
         asaas_checkout_id: checkout.id,
-        asaas_customer_id: asaasCustomer.id,
+        asaas_customer_id: asaasCustomerId,
         status: 'pending',
         checkout_url: checkout.url,
         value: data.value,
@@ -340,8 +379,8 @@ serve(async (req) => {
           status: checkout.status
         },
         customer: {
-          id: asaasCustomer.id,
-          name: asaasCustomer.name,
+          id: asaasCustomerId,
+          name: data.customer.name,
         },
         subscription: {
           startDate: startDate.toISOString().split('T')[0],

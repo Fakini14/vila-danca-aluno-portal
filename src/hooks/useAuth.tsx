@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,18 +13,36 @@ interface Profile {
   status: 'ativo' | 'inativo';
 }
 
+interface UserSignUpData {
+  nome_completo: string;
+  cpf: string;
+  whatsapp: string;
+  sexo?: string;
+  data_nascimento?: string;
+  endereco_completo?: string;
+  cep?: string;
+  role?: string;
+}
+
+interface AuthResult {
+  error: AuthError | Error | null;
+  data?: unknown;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, userData: { nome_completo: string; cpf: string; whatsapp: string }) => Promise<{ error: any }>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
-  resendConfirmation: (email: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string, userData: UserSignUpData) => Promise<AuthResult>;
+  resetPassword: (email: string) => Promise<AuthResult>;
+  resendConfirmation: (email: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
-  updatePassword: (newPassword: string) => Promise<{ error: any }>;
-  updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  updatePassword: (newPassword: string) => Promise<AuthResult>;
+  updateProfile: (updates: Partial<Profile>) => Promise<AuthResult>;
+  verifySession: () => Promise<boolean>;
+  getTokenClaims: () => Promise<Record<string, unknown> | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +108,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Função para decodificar JWT claims (sem verificar assinatura - apenas para leitura)
+  const getTokenClaims = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) return null;
+      
+      // Decodifica o JWT para obter os claims
+      const parts = session.access_token.split('.');
+      if (parts.length !== 3) {
+        console.error('Invalid JWT format');
+        return null;
+      }
+      
+      // Decodifica o payload (segunda parte do JWT)
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      
+      return payload;
+    } catch (error) {
+      console.error('Error decoding JWT claims:', error);
+      return null;
+    }
+  };
+
+  // Função otimizada para verificar sessão
+  const verifySession = async () => {
+    try {
+      // Primeiro tenta obter os claims do token (mais rápido)
+      const claims = await getTokenClaims();
+      
+      if (claims && claims.sub && claims.exp) {
+        // Verifica se o token não está expirado
+        const now = Math.floor(Date.now() / 1000);
+        if (claims.exp > now) {
+          // Token válido, verifica se temos o perfil carregado
+          if (!profile || profile.id !== claims.sub) {
+            await fetchUserProfile(claims.sub);
+          }
+          return true;
+        }
+      }
+      
+      // Fallback para getUser se necessário
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        return false;
+      }
+      
+      // Atualiza perfil se necessário
+      if (!profile || profile.id !== user.id) {
+        await fetchUserProfile(user.id);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error verifying session:', error);
+      return false;
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -117,17 +195,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       return { error };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       toast({
         title: "Erro no login",
-        description: "Ocorreu um erro inesperado",
+        description: errorMsg,
         variant: "destructive",
       });
-      return { error };
+      return { error: error instanceof Error ? error : new Error(errorMsg) };
     }
   };
 
-  const signUp = async (email: string, password: string, userData: any) => {
+  const signUp = async (email: string, password: string, userData: UserSignUpData): Promise<AuthResult> => {
     try {
       const redirectUrl = `${window.location.origin}/auth/confirm`;
       
@@ -154,9 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sexo: userData.sexo,
             data_nascimento: userData.data_nascimento,
             endereco_completo: userData.endereco_completo,
-            responsavel_nome: userData.responsavel_nome,
-            responsavel_telefone: userData.responsavel_telefone,
-            responsavel_email: userData.responsavel_email,
+            cep: userData.cep,
             role: userData.role || 'aluno'
           }
         }
@@ -206,19 +283,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error, data };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Unexpected error during signUp:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       
       toast({
         title: "Erro no cadastro",
         description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
-      return { error };
+      return { error: error instanceof Error ? error : new Error(errorMsg) };
     }
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string): Promise<AuthResult> => {
     try {
       const redirectUrl = `${window.location.origin}/reset-password`;
       
@@ -240,17 +318,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       toast({
         title: "Erro ao enviar email",
-        description: "Ocorreu um erro inesperado",
+        description: errorMsg,
         variant: "destructive",
       });
-      return { error };
+      return { error: error instanceof Error ? error : new Error(errorMsg) };
     }
   };
 
-  const resendConfirmation = async (email: string) => {
+  const resendConfirmation = async (email: string): Promise<AuthResult> => {
     try {
       const redirectUrl = `${window.location.origin}/auth/confirm`;
       
@@ -276,13 +355,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       toast({
         title: "Erro ao reenviar confirmação",
-        description: "Ocorreu um erro inesperado",
+        description: errorMsg,
         variant: "destructive",
       });
-      return { error };
+      return { error: error instanceof Error ? error : new Error(errorMsg) };
     }
   };
 
@@ -300,16 +380,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       toast({
         title: "Erro no logout",
-        description: "Ocorreu um erro ao sair",
+        description: errorMsg,
         variant: "destructive",
       });
     }
   };
 
-  const updatePassword = async (newPassword: string) => {
+  const updatePassword = async (newPassword: string): Promise<AuthResult> => {
     if (!user) return { error: new Error('User not authenticated') };
 
     try {
@@ -332,17 +413,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       return { error: null };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       toast({
         title: "Erro ao redefinir senha",
-        description: "Ocorreu um erro inesperado",
+        description: errorMsg,
         variant: "destructive",
       });
-      return { error };
+      return { error: error instanceof Error ? error : new Error(errorMsg) };
     }
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<Profile>): Promise<AuthResult> => {
     if (!user) return { error: new Error('User not authenticated') };
 
     try {
@@ -369,13 +451,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       return { error: null };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro inesperado';
       toast({
         title: "Erro ao atualizar perfil",
-        description: "Ocorreu um erro inesperado",
+        description: errorMsg,
         variant: "destructive",
       });
-      return { error };
+      return { error: error instanceof Error ? error : new Error(errorMsg) };
     }
   };
 
@@ -391,6 +474,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     updatePassword,
     updateProfile,
+    verifySession,
+    getTokenClaims,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

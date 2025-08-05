@@ -17,9 +17,7 @@ interface StudentDetails {
   sexo: 'masculino' | 'feminino' | 'outro';
   data_nascimento: string | null;
   endereco_completo: string | null;
-  responsavel_nome: string | null;
-  responsavel_telefone: string | null;
-  responsavel_email: string | null;
+  cep: string | null;
   email_confirmed: boolean;
 }
 
@@ -68,9 +66,7 @@ export default function StudentDetail() {
         sexo: data.sexo,
         data_nascimento: data.data_nascimento,
         endereco_completo: data.endereco_completo,
-        responsavel_nome: data.responsavel_nome,
-        responsavel_telefone: data.responsavel_telefone,
-        responsavel_email: data.responsavel_email,
+        cep: data.cep,
         email_confirmed: data.profiles?.email_confirmed || false,
       };
 

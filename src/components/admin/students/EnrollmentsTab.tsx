@@ -32,7 +32,6 @@ interface Enrollment {
     dias_semana: string[];
     horario_inicio: string;
     horario_fim: string;
-    capacidade_maxima: number;
     class_type: {
       id: string;
       nome: string;
@@ -71,7 +70,6 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
             dias_semana,
             horario_inicio,
             horario_fim,
-            capacidade_maxima,
             class_types(
               id,
               nome,
@@ -117,7 +115,6 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
           dias_semana: enrollment.classes?.dias_semana || [],
           horario_inicio: enrollment.classes?.horario_inicio || '',
           horario_fim: enrollment.classes?.horario_fim || '',
-          capacidade_maxima: enrollment.classes?.capacidade_maxima || 0,
           class_type: {
             id: enrollment.classes?.class_types?.id || '',
             nome: enrollment.classes?.class_types?.nome || '',
@@ -306,7 +303,7 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
                         
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{enrollment.class.current_enrollments}/{enrollment.class.capacidade_maxima} alunos</span>
+                          <span>{enrollment.class.current_enrollments}/20 alunos</span>
                         </div>
                       </div>
                       
@@ -402,7 +399,7 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
                         
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>{enrollment.class.current_enrollments}/{enrollment.class.capacidade_maxima} alunos</span>
+                          <span>{enrollment.class.current_enrollments}/20 alunos</span>
                         </div>
                       </div>
                       

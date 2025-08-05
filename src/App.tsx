@@ -27,6 +27,7 @@ import AdminFinance from "./pages/admin/Finance";
 import AdminEvents from "./pages/admin/Events";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
+import AdminUserRoles from "./pages/admin/UserRoles";
 
 // Checkout Pages
 import { CheckoutPage } from "./components/checkout/CheckoutPage";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="events" element={<AdminEvents />} />
               <Route path="reports" element={<AdminReports />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="user-roles" element={<AdminUserRoles />} />
             </Route>
 
             {/* Teacher Routes */}

@@ -18,7 +18,8 @@ import {
   GraduationCap,
   BookOpen,
   DollarSign,
-  Calendar
+  Calendar,
+  UserCog
 } from 'lucide-react';
 
 const menuItems = [
@@ -27,7 +28,8 @@ const menuItems = [
   { icon: GraduationCap, label: 'Professores', path: '/admin/teachers' },
   { icon: BookOpen, label: 'Turmas', path: '/admin/classes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/finance' },
-  { icon: Calendar, label: 'Eventos', path: '/admin/events' }
+  { icon: Calendar, label: 'Eventos', path: '/admin/events' },
+  { icon: UserCog, label: 'Gerenciar Funções', path: '/admin/user-roles' }
 ];
 
 export default function AdminLayout() {

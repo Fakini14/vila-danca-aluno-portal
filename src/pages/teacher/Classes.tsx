@@ -35,7 +35,6 @@ interface TeacherClass {
   horario_inicio: string;
   horario_fim: string;
   sala: string;
-  capacidade_maxima: number;
   enrollments?: {
     ativa: boolean;
     students: {
@@ -63,7 +62,6 @@ const useTeacherClasses = (teacherId: string) => {
               horario_inicio,
               horario_fim,
               sala,
-              capacidade_maxima
             )
           `)
           .eq('teacher_id', teacherId);
@@ -267,7 +265,7 @@ export default function TeacherClasses() {
                     </span>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    Capacidade: {turma.capacidade_maxima}
+                    Capacidade: 20
                   </span>
                 </div>
 

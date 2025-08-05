@@ -48,10 +48,8 @@ const formSchema = z.object({
   dias_semana: z.array(z.string()).min(1, 'Selecione pelo menos um dia da semana'),
   horario_inicio: z.string().min(1, 'Horário de início é obrigatório'),
   horario_fim: z.string().min(1, 'Horário de fim é obrigatório'),
-  sala: z.string().optional(),
-  capacidade_maxima: z.number().min(1).max(100).optional(),
   valor_aula: z.number().min(0, 'Valor deve ser maior ou igual a 0'),
-  data_inicio: z.string().min(1, 'Data de início é obrigatória'),
+  data_inicio: z.string().optional(),
   observacoes: z.string().optional(),
   ativa: z.boolean().default(true),
 });
@@ -93,18 +91,24 @@ const useTeachers = () => {
     queryKey: ['teachers-active'],
     queryFn: async (): Promise<Teacher[]> => {
       const { data, error } = await supabase
-        .from('staff')
+        .from('profiles')
         .select(`
           id,
-          profiles!inner(
-            nome_completo
-          )
+          nome_completo
         `)
-        .eq('funcao', 'professor')
-        .order('profiles(nome_completo)');
+        .eq('role', 'professor')
+        .eq('status', 'ativo')
+        .order('nome_completo');
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform to match expected interface
+      return data?.map(profile => ({
+        id: profile.id,
+        profiles: {
+          nome_completo: profile.nome_completo
+        }
+      })) || [];
     },
   });
 };
@@ -127,8 +131,6 @@ export default function NewClass() {
       dias_semana: [],
       horario_inicio: '09:00',
       horario_fim: '10:00',
-      sala: '',
-      capacidade_maxima: 20,
       valor_aula: 150,
       data_inicio: new Date().toISOString().split('T')[0],
       observacoes: '',
@@ -158,8 +160,6 @@ export default function NewClass() {
         horario_inicio: data.horario_inicio,
         horario_fim: data.horario_fim,
         tempo_total_minutos: duration,
-        sala: data.sala || null,
-        capacidade_maxima: data.capacidade_maxima || null,
         valor_aula: data.valor_aula,
         valor_matricula: null,
         professor_principal_id: data.professor_principal_id || null,
@@ -421,46 +421,6 @@ export default function NewClass() {
                 />
               </div>
 
-              {/* Sala e Capacidade */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="sala"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sala</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Sala 1, Estúdio A..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="capacidade_maxima"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Capacidade Máxima</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="100"
-                          placeholder="20"
-                          value={field.value || ''}
-                          onChange={(e) => field.onChange(Number(e.target.value) || undefined)}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Número máximo de alunos na turma
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               {/* Valor e Data */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -490,7 +450,7 @@ export default function NewClass() {
                   name="data_inicio"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data de Início *</FormLabel>
+                      <FormLabel>Data de Início</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>

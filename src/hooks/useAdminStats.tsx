@@ -233,7 +233,6 @@ export const useClassOccupancy = () => {
         .from('classes')
         .select(`
           nome,
-          capacidade_maxima,
           enrollments!inner (
             ativa
           )
@@ -243,7 +242,7 @@ export const useClassOccupancy = () => {
 
       return classes?.map((classItem) => {
         const enrolledCount = classItem.enrollments?.length || 0;
-        const capacity = classItem.capacidade_maxima || 0;
+        const capacity = 20; // Default capacity for all classes
         const occupancyRate = capacity > 0 ? (enrolledCount / capacity) * 100 : 0;
 
         return {

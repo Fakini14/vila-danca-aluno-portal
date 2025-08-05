@@ -16,9 +16,8 @@ interface StudentData {
   sexo: string;
   data_nascimento: string;
   endereco_completo: string;
-  responsavel_nome: string;
-  responsavel_telefone: string;
-  responsavel_email: string;
+  cep: string;
+  whatsapp: string;
   auth_status: 'pending' | 'active';
   created_at: string;
   updated_at: string;
@@ -74,12 +73,12 @@ export function StudentList() {
       )
     },
     {
-      key: 'responsavel_nome',
-      title: 'Responsável',
+      key: 'whatsapp',
+      title: 'Contato',
       render: (value, student) => (
         <div>
           <p className="text-sm">{value || 'Não informado'}</p>
-          <p className="text-sm text-muted-foreground">{student.responsavel_telefone || ''}</p>
+          <p className="text-sm text-muted-foreground">{student.cep || ''}</p>
         </div>
       )
     },
