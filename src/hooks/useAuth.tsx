@@ -55,38 +55,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email_confirmed_at);
         
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
-        
         if (session?.user) {
-          // Fetch user profile
-          setTimeout(async () => {
-            await fetchUserProfile(session.user.id);
-          }, 0);
+          // Fetch user profile and wait for it to complete
+          await fetchUserProfile(session.user.id);
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
+    // THEN check for existing session - but don't duplicate the profile fetch
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        // Only set initial state, let onAuthStateChange handle profile fetching
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // If no session, set loading false immediately
+        if (!session?.user) {
+          setLoading(false);
+        }
+        // If there is a session, onAuthStateChange will handle the profile fetch and loading
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [toast]);
 
   const fetchUserProfile = async (userId: string) => {
@@ -99,12 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error);
+        setProfile(null);
+        setLoading(false);
         return;
       }
 
       setProfile(data);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setProfile(null);
+      setLoading(false);
     }
   };
 
