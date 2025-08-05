@@ -22,7 +22,7 @@
  * Last fixed: December 2024 - Claude Code
  */
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -77,6 +77,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // CACHE OPTIMIZATION: Prevent unnecessary refetches
+  const lastFetchTime = React.useRef<number>(0);
+  const lastFetchedUserId = React.useRef<string | null>(null);
+  const isFetching = React.useRef<boolean>(false);
+  const CACHE_DURATION = 30000; // 30 seconds cache
+  
+  // DEBUG: Log cache stats periodically (disabled in production)
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const interval = setInterval(() => {
+        if (profile) {
+          const cacheAge = Date.now() - lastFetchTime.current;
+          console.log('📊 Auth Cache Stats:', {
+            hasProfile: !!profile,
+            profileId: profile.id?.substring(0, 8),
+            cacheAge: Math.round(cacheAge / 1000) + 's',
+            isFetching: isFetching.current
+          });
+        }
+      }, 60000); // Log every minute
+      
+      return () => clearInterval(interval);
+    }
+  }, [profile]);
 
   useEffect(() => {
     let mounted = true;
@@ -84,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // CRITICAL FIX: Enhanced auth state listener with timeout protection
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 Auth state change:', event, session?.user?.email_confirmed_at);
+        console.log('🔄 Auth state change:', event, 'User ID:', session?.user?.id?.substring(0, 8), 'Profile cached:', !!profile);
         
         if (!mounted) return;
         
@@ -120,7 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => reject(new Error('getSession timeout after 5 seconds')), 5000);
         });
         
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as { data: { session: Session | null } };
+        const { data: { session } } = result;
         
         if (!mounted) return;
         
@@ -152,49 +178,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
 
     return () => {
+      console.log('🧹 AuthProvider cleanup - unmounting');
       mounted = false;
       subscription.unsubscribe();
+      // Clear cache on unmount
+      lastFetchTime.current = 0;
+      lastFetchedUserId.current = null;
+      isFetching.current = false;
     };
   }, [toast]);
 
-  // CRITICAL FIX: This function was causing infinite loading loops
-  // Always ensure setLoading(false) is called, with timeout protection
-  const fetchUserProfile = async (userId: string) => {
-    console.log('🔄 fetchUserProfile started for userId:', userId);
+  // OPTIMIZED: Smart caching to prevent unnecessary refetches
+  const fetchUserProfile = async (userId: string, forceRefresh = false) => {
+    console.log('🔄 fetchUserProfile started for userId:', userId, { forceRefresh });
     
-    // Create a timeout promise to prevent infinite loading
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Profile fetch timeout after 10 seconds')), 10000);
-    });
+    // CACHE CHECK: Skip if we already have valid cached data
+    const now = Date.now();
+    const isCacheValid = (
+      !forceRefresh &&
+      profile &&
+      profile.id === userId &&
+      lastFetchedUserId.current === userId &&
+      (now - lastFetchTime.current) < CACHE_DURATION
+    );
     
-    // Create the actual fetch promise
-    const fetchPromise = supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    if (isCacheValid) {
+      console.log('✨ Using cached profile data, skipping fetch');
+      setLoading(false);
+      return;
+    }
+    
+    // DEBOUNCE: Prevent multiple simultaneous fetches
+    if (isFetching.current && lastFetchedUserId.current === userId) {
+      console.log('⏳ Profile fetch already in progress, skipping duplicate');
+      return;
+    }
+    
+    isFetching.current = true;
     
     try {
-      console.log('📡 Executing profile query with timeout protection...');
+      // OPTIMIZED: Reduced timeout from 10s to 5s for better UX
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout after 5 seconds')), 5000);
+      });
       
-      // Race between fetch and timeout
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const fetchPromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      console.log('📡 Executing profile query with 5s timeout...');
+      
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as { data: Profile | null; error: any };
+      const { data, error } = result;
       
       if (error) {
         console.error('❌ Error fetching profile:', error);
-        setProfile(null);
-        setLoading(false); // CRITICAL: Always set loading false
+        
+        // FALLBACK: Don't clear existing profile if we have one and this is just a refresh
+        if (!profile || profile.id !== userId) {
+          setProfile(null);
+        } else {
+          console.log('🛡️ Keeping existing profile data after fetch error');
+        }
+        
+        setLoading(false);
         return;
       }
       
       console.log('✅ Profile fetched successfully:', data?.nome_completo);
       setProfile(data);
-      setLoading(false); // CRITICAL: Always set loading false
+      lastFetchTime.current = now;
+      lastFetchedUserId.current = userId;
+      setLoading(false);
       
     } catch (error) {
       console.error('❌ Error or timeout in fetchUserProfile:', error);
-      setProfile(null);
-      setLoading(false); // CRITICAL: Always set loading false even on timeout
+      
+      // RETRY LOGIC: Attempt one retry on timeout
+      if (error instanceof Error && error.message.includes('timeout') && !forceRefresh) {
+        console.log('🔄 Timeout detected, attempting one retry...');
+        setTimeout(() => {
+          fetchUserProfile(userId, true);
+        }, 1000);
+        return;
+      }
+      
+      // FALLBACK: Keep existing profile if available
+      if (!profile || profile.id !== userId) {
+        setProfile(null);
+      } else {
+        console.log('🛡️ Keeping existing profile data after timeout');
+      }
+      
+      setLoading(false);
+    } finally {
+      isFetching.current = false;
     }
     
     console.log('✅ fetchUserProfile completed - loading set to false');
@@ -226,6 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Função otimizada para verificar sessão
   const verifySession = async () => {
+    console.log('🔍 verifySession called - checking token and profile cache');
     try {
       // Primeiro tenta obter os claims do token (mais rápido)
       const claims = await getTokenClaims();
@@ -234,9 +315,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Verifica se o token não está expirado
         const now = Math.floor(Date.now() / 1000);
         if (claims.exp > now) {
-          // Token válido, verifica se temos o perfil carregado
+          // OPTIMIZED: Smart profile check with cache
           if (!profile || profile.id !== claims.sub) {
             await fetchUserProfile(claims.sub);
+          } else {
+            const now = Date.now();
+            if (now - lastFetchTime.current > CACHE_DURATION) {
+              await fetchUserProfile(claims.sub);
+            }
           }
           return true;
         }
@@ -248,9 +334,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
-      // Atualiza perfil se necessário
+      // OPTIMIZED: Smart profile update with cache check
       if (!profile || profile.id !== user.id) {
         await fetchUserProfile(user.id);
+      } else {
+        // Check if cache is still valid
+        const now = Date.now();
+        if (now - lastFetchTime.current > CACHE_DURATION) {
+          await fetchUserProfile(user.id);
+        }
       }
       
       return true;

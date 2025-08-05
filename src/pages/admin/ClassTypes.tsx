@@ -71,10 +71,11 @@ export default function ClassTypes() {
     },
   });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta modalidade? Esta ação não pode ser desfeita.')) {
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a modalidade "${name}"? Esta ação não pode ser desfeita.`)) {
       return;
     }
+    console.log('ClassTypes: Deletando modalidade:', { id, name });
     deleteMutation.mutate(id);
   };
 
@@ -153,6 +154,7 @@ export default function ClassTypes() {
                       variant="ghost" 
                       size="sm"
                       onClick={() => {
+                        console.log('ClassTypes: Botão editar clicado para modalidade:', classType);
                         setSelectedClassType(classType);
                         setShowForm(true);
                       }}
@@ -162,7 +164,7 @@ export default function ClassTypes() {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => handleDelete(classType.id)}
+                      onClick={() => handleDelete(classType.id, classType.name)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -193,14 +195,21 @@ export default function ClassTypes() {
       <ClassTypeFormModal
         open={showForm}
         onClose={() => {
+          console.log('ClassTypes: Fechando modal');
           setShowForm(false);
           setSelectedClassType(null);
         }}
         classType={selectedClassType}
         onSuccess={() => {
+          console.log('ClassTypes: onSuccess do modal - invalidando queries');
+          // Forçar invalidation mais agressiva
           queryClient.invalidateQueries({ queryKey: ['classTypes'] });
+          queryClient.refetchQueries({ queryKey: ['classTypes'] });
+          
           setShowForm(false);
           setSelectedClassType(null);
+          
+          console.log('ClassTypes: Modal fechado e estado limpo');
         }}
       />
     </div>

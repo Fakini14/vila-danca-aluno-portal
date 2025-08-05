@@ -55,36 +55,63 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
   });
 
   useEffect(() => {
+    console.log('ClassTypeFormModal: useEffect executado', {
+      classType: classType ? { id: classType.id, name: classType.name } : null,
+      isEditing
+    });
+
     if (classType) {
       form.reset({
         name: classType.name,
       });
+      console.log('ClassTypeFormModal: Formulário resetado com dados da modalidade:', classType.name);
     } else {
       form.reset({
         name: '',
       });
+      console.log('ClassTypeFormModal: Formulário resetado para nova modalidade');
     }
-  }, [classType, form]);
+  }, [classType, form, isEditing]);
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const { error } = await supabase
+      console.log('ClassTypeFormModal: Criando nova modalidade:', data);
+      
+      const { error, data: createdData } = await supabase
         .from('class_types')
-        .insert([data]);
+        .insert([data])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('ClassTypeFormModal: Erro ao criar modalidade:', error);
+        throw error;
+      }
+
+      console.log('ClassTypeFormModal: Modalidade criada com sucesso:', createdData);
+      return createdData;
     },
-    onSuccess: () => {
+    onSuccess: (createdData) => {
+      console.log('ClassTypeFormModal: Create onSuccess chamado:', createdData);
       toast({
         title: 'Modalidade criada',
-        description: 'Nova modalidade adicionada com sucesso',
+        description: `Nova modalidade "${createdData.name}" foi adicionada com sucesso`,
       });
       onSuccess();
     },
     onError: (error: Error) => {
+      console.error('ClassTypeFormModal: Create onError:', error);
+      let errorMessage = 'Erro desconhecido ao criar modalidade';
+      
+      if (error.message.includes('duplicate') || error.message.includes('unique')) {
+        errorMessage = 'Já existe uma modalidade com este nome';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Erro ao criar modalidade',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     },
@@ -92,35 +119,62 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      if (!classType) return;
+      if (!classType) {
+        console.error('ClassTypeFormModal: Tentativa de atualização sem classType');
+        throw new Error('Modalidade não encontrada para atualização');
+      }
 
-      const { error } = await supabase
+      console.log('ClassTypeFormModal: Iniciando atualização da modalidade', {
+        id: classType.id,
+        currentName: classType.name,
+        newData: data
+      });
+
+      const { error, data: updatedData } = await supabase
         .from('class_types')
         .update(data)
-        .eq('id', classType.id);
+        .eq('id', classType.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('ClassTypeFormModal: Erro no Supabase ao atualizar modalidade:', error);
+        throw error;
+      }
+
+      console.log('ClassTypeFormModal: Modalidade atualizada com sucesso:', updatedData);
+      return updatedData;
     },
-    onSuccess: () => {
+    onSuccess: (updatedData) => {
+      console.log('ClassTypeFormModal: onSuccess chamado com dados:', updatedData);
       toast({
         title: 'Modalidade atualizada',
-        description: 'Modalidade atualizada com sucesso',
+        description: `Modalidade "${updatedData.name}" foi atualizada com sucesso`,
       });
       onSuccess();
     },
     onError: (error: Error) => {
+      console.error('ClassTypeFormModal: onError chamado:', error);
       toast({
         title: 'Erro ao atualizar modalidade',
-        description: error.message,
+        description: error.message || 'Erro desconhecido ao atualizar modalidade',
         variant: 'destructive',
       });
     },
   });
 
   const onSubmit = (data: FormData) => {
+    console.log('ClassTypeFormModal: onSubmit chamado', {
+      isEditing,
+      data,
+      classType: classType ? { id: classType.id, name: classType.name } : null
+    });
+
     if (isEditing) {
+      console.log('ClassTypeFormModal: Executando updateMutation');
       updateMutation.mutate(data);
     } else {
+      console.log('ClassTypeFormModal: Executando createMutation');
       createMutation.mutate(data);
     }
   };
@@ -167,15 +221,25 @@ export function ClassTypeFormModal({ open, onClose, classType, onSuccess }: Clas
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={() => {
+                  console.log('ClassTypeFormModal: Botão Cancelar clicado');
+                  onClose();
+                }}
                 disabled={isLoading}
                 className="flex-1"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading} className="flex-1">
+              <Button 
+                type="submit" 
+                disabled={isLoading || !form.formState.isValid} 
+                className="flex-1"
+              >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Salvar Alterações' : 'Criar Modalidade'}
+                {isLoading 
+                  ? (isEditing ? 'Salvando...' : 'Criando...') 
+                  : (isEditing ? 'Salvar Alterações' : 'Criar Modalidade')
+                }
               </Button>
             </div>
           </form>
