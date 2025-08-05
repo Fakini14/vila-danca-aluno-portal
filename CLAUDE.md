@@ -256,6 +256,35 @@ format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 - MCP Server is configured for Supabase integration - use MCP tools when available
 - To check the current development phase, open docs/CLAUDE-ROADMAP.md file.
 
+## 🚨 CRITICAL BUG ALERT - AUTH INFINITE LOADING
+
+### ⚠️ Known Issue: Infinite Loading After Login
+
+This is a **RECURRENT** bug that has been fixed multiple times. If you encounter infinite loading after login:
+
+**🔍 Quick Debugging Steps:**
+1. Open browser console and look for auth-related errors
+2. Check Network tab for hanging Supabase requests to `profiles` table
+3. Look for timeout messages in console logs
+4. Verify `fetchUserProfile` is completing successfully
+
+**🛠️ Root Cause:**
+The `useAuth` hook's `fetchUserProfile` function can hang or fail silently, preventing `setLoading(false)` from being called.
+
+**💡 Current Protections in `src/hooks/useAuth.tsx`:**
+- ✅ `fetchUserProfile` timeout (10 seconds)
+- ✅ `initializeAuth` timeout (5 seconds) 
+- ✅ Auth fallback timeout (15 seconds)
+- ✅ Enhanced error handling with Promise.race()
+
+**🚨 DO NOT REMOVE** these timeout protections or the bug will return.
+
+**🎯 If Bug Returns:**
+1. Check if timeout protections were accidentally removed
+2. Verify Supabase connection is stable
+3. Check RLS policies on `profiles` table
+4. Review recent changes to auth flow
+
 **Important** The docs/CLAUDE-ROADMAP.md file must be updated by the implementation-documenter agent whenever any of the following occurs:
 - A project milestone is completed
 - Existing functionalities in the codebase are modified

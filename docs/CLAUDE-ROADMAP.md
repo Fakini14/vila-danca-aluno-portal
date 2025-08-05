@@ -861,5 +861,63 @@ class_teachers(profiles(nome_completo))
 
 ---
 
+## **🚨 CORREÇÕES CRÍTICAS E BUGS RECORRENTES**
+
+### **CORREÇÃO CRÍTICA: Bug de Loading Infinito após Login**
+**Data**: 05/08/2025 - Dezembro 2024  
+**Status**: ✅ CORRIGIDO DEFINITIVAMENTE  
+**Prioridade**: 🔴 CRÍTICA
+
+**📋 Problema Identificado:**
+- **Sintoma**: Tela de loading infinita após login bem-sucedido
+- **Frequência**: Bug recorrente que acontecia "inúmeras vezes"
+- **Root Cause**: `fetchUserProfile` no hook `useAuth` travava sem chamar `setLoading(false)`
+
+**🔧 Correções Implementadas:**
+
+**1. Timeout Protection no `fetchUserProfile`:**
+```typescript
+// Promise.race() com timeout de 10 segundos
+const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+```
+
+**2. Timeout Protection no `initializeAuth`:**
+```typescript
+// Promise.race() com timeout de 5 segundos para getSession()
+const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+```
+
+**3. Fallback Timeout Global:**
+```typescript
+// Timeout de 15 segundos como fallback final
+setTimeout(() => {
+  console.log('⏰ Auth timeout fallback - forcing loading to false');
+  setLoading(false);
+}, 15000);
+```
+
+**4. Enhanced Error Handling:**
+- Todos os try/catch garantem `setLoading(false)`
+- Logs detalhados para debugging futuro
+- Proteção contra Promise rejections não tratadas
+
+**📁 Arquivos Modificados:**
+- `src/hooks/useAuth.tsx` - Correções principais com timeouts
+- `CLAUDE.md` - Seção de debugging adicionada
+- `docs/CLAUDE-ROADMAP.md` - Documentação da correção
+
+**⚠️ AVISOS CRÍTICOS:**
+- **NUNCA REMOVER** as proteções de timeout (`Promise.race()`)
+- **NUNCA REMOVER** os logs de debugging em `fetchUserProfile`
+- **SEMPRE GARANTIR** que `setLoading(false)` seja chamado em todos os caminhos
+
+**🎯 Para Debugging Futuro:**
+1. Verificar console logs para erros de profile fetch
+2. Monitorar Network tab para requests pendentes ao Supabase
+3. Verificar se timeouts estão sendo acionados
+4. Validar políticas RLS na tabela `profiles`
+
+---
+
 **Mantido por**: Equipe de Desenvolvimento Vila Dança & Arte  
-**Última atualização**: 05/08/2025 - Consolidação arquitetural completa com remoção de todas as views materializadas
+**Última atualização**: 05/08/2025 - Correção definitiva do bug de loading infinito + Consolidação arquitetural

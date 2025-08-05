@@ -226,7 +226,7 @@ export default function Classes() {
       render: (value, classData) => (
         <div className="flex items-center gap-2 text-sm">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span>{value || 0}/20</span>
+          <span>{value || 0}</span>
         </div>
       )
     },
@@ -369,10 +369,6 @@ export default function Classes() {
             <Button onClick={() => navigate('/admin/classes/new')} className="gap-2">
               <Plus className="h-4 w-4" />
               Nova Turma
-            </Button>
-            <Button onClick={() => setShowForm(true)} variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Criar Rápido
             </Button>
           </div>
 
@@ -579,14 +575,6 @@ export default function Classes() {
                   </div>
                 </div>
 
-                {/* Sala */}
-                {turma.sala && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{turma.sala}</span>
-                  </div>
-                )}
-
                 {/* Valor */}
                 <div className="flex items-center gap-2 text-sm">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -597,7 +585,7 @@ export default function Classes() {
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{turma.active_enrollments || 0}/20</span>
+                    <span>{turma.active_enrollments || 0}</span>
                   </div>
                   <Badge variant={turma.ativa ? 'default' : 'secondary'}>
                     {turma.ativa ? 'Ativa' : 'Inativa'}

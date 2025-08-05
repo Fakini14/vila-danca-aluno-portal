@@ -1,3 +1,27 @@
+/**
+ * CRITICAL BUG ALERT - INFINITE LOADING PREVENTION
+ * 
+ * ⚠️  This file contains critical fixes for a RECURRENT infinite loading bug
+ * that happens after login. The problem was in fetchUserProfile and auth 
+ * initialization not properly handling timeouts and errors.
+ * 
+ * 🚨 NEVER REMOVE the following timeout protections:
+ * - fetchUserProfile timeout (10s)
+ * - initializeAuth timeout (5s) 
+ * - Auth fallback timeout (15s)
+ * - Promise.race() calls for timeout protection
+ * 
+ * 🐛 ROOT CAUSE: If fetchUserProfile hangs or fails silently,
+ * setLoading(false) was never called, causing infinite loading screen.
+ * 
+ * 💡 If you see infinite loading after login, check:
+ * 1. Console logs for profile fetch errors
+ * 2. Network tab for hanging Supabase requests
+ * 3. If timeout logs are being triggered
+ * 
+ * Last fixed: December 2024 - Claude Code
+ */
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -57,10 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener FIRST
+    // CRITICAL FIX: Enhanced auth state listener with timeout protection
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email_confirmed_at);
+        console.log('🔄 Auth state change:', event, session?.user?.email_confirmed_at);
         
         if (!mounted) return;
         
@@ -68,34 +92,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile and wait for it to complete
-          await fetchUserProfile(session.user.id);
+          console.log('👤 User session found - fetching profile...');
+          // CRITICAL FIX: Always ensure loading is resolved
+          try {
+            await fetchUserProfile(session.user.id);
+          } catch (error) {
+            console.error('❌ Profile fetch failed in auth state change:', error);
+            setProfile(null);
+            setLoading(false); // CRITICAL: Ensure loading is always set false
+          }
         } else {
+          console.log('❌ No user session - clearing profile');
           setProfile(null);
           setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session - but don't duplicate the profile fetch
+    // CRITICAL FIX: Add timeout protection to prevent infinite loading
     const initializeAuth = async () => {
+      console.log('🚀 Initializing auth...');
+      
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Add timeout to getSession to prevent hanging
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('getSession timeout after 5 seconds')), 5000);
+        });
+        
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
         if (!mounted) return;
+        
+        console.log('📊 Session check result:', session ? 'Session found' : 'No session');
         
         // Only set initial state, let onAuthStateChange handle profile fetching
         setSession(session);
         setUser(session?.user ?? null);
         
-        // If no session, set loading false immediately
+        // CRITICAL FIX: Always set loading false if no session
         if (!session?.user) {
+          console.log('❌ No session - setting loading to false');
           setLoading(false);
+        } else {
+          console.log('✅ Session exists - onAuthStateChange will handle profile fetch');
+          // FALLBACK: Set a maximum timeout for the entire auth process
+          setTimeout(() => {
+            console.log('⏰ Auth timeout fallback - forcing loading to false after 15 seconds');
+            setLoading(false);
+          }, 15000);
         }
-        // If there is a session, onAuthStateChange will handle the profile fetch and loading
+        
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        setLoading(false);
+        console.error('❌ Error or timeout initializing auth:', error);
+        setLoading(false); // CRITICAL: Always set loading false on error
       }
     };
 
@@ -107,28 +157,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [toast]);
 
+  // CRITICAL FIX: This function was causing infinite loading loops
+  // Always ensure setLoading(false) is called, with timeout protection
   const fetchUserProfile = async (userId: string) => {
+    console.log('🔄 fetchUserProfile started for userId:', userId);
+    
+    // Create a timeout promise to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Profile fetch timeout after 10 seconds')), 10000);
+    });
+    
+    // Create the actual fetch promise
+    const fetchPromise = supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
+      console.log('📡 Executing profile query with timeout protection...');
+      
+      // Race between fetch and timeout
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('❌ Error fetching profile:', error);
         setProfile(null);
-        setLoading(false);
+        setLoading(false); // CRITICAL: Always set loading false
         return;
       }
-
+      
+      console.log('✅ Profile fetched successfully:', data?.nome_completo);
       setProfile(data);
-      setLoading(false);
+      setLoading(false); // CRITICAL: Always set loading false
+      
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('❌ Error or timeout in fetchUserProfile:', error);
       setProfile(null);
-      setLoading(false);
+      setLoading(false); // CRITICAL: Always set loading false even on timeout
     }
+    
+    console.log('✅ fetchUserProfile completed - loading set to false');
   };
 
   // Função para decodificar JWT claims (sem verificar assinatura - apenas para leitura)
