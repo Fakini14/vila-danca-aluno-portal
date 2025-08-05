@@ -516,14 +516,14 @@ export default function Classes() {
                       <CardTitle className="text-lg">
                         {turma.nome || `${turma.modalidade} - ${turma.nivel}`}
                       </CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                         {turma.modalidade}
                         <Badge variant="outline" className="text-xs">
                           {turma.nivel === 'basico' && 'Básico'}
                           {turma.nivel === 'intermediario' && 'Intermediário'}
                           {turma.nivel === 'avancado' && 'Avançado'}
                         </Badge>
-                      </CardDescription>
+                      </div>
                     </div>
                   </div>
                   <DropdownMenu>
