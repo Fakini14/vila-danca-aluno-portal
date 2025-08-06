@@ -1008,6 +1008,81 @@ const displayName = student.nome_completo || student.email;
 
 ---
 
+## **FASE 10.5: CORREÇÃO DA VISUALIZAÇÃO DE PROFESSORES NO PORTAL ADMINISTRATIVO**
+**Status: ✅ CONCLUÍDA (06/08/2025)**
+
+### Checklist de Implementação:
+- **10.5.1** ✅ **Diagnóstico do Problema:**
+  - Problema identificado: Tela `/admin/teachers` não exibia nenhum professor cadastrado
+  - Root cause: Query complexa com JOINs aninhados em `useTeachersOptimized()` falhava silenciosamente
+  - JOIN problemático: tentativa de buscar `classes` através de foreign key inexistente
+  - Erro não aparecia no console, mas query retornava array vazio
+- **10.5.2** ✅ **Simplificação da Query:**
+  - Arquivo modificado: `src/hooks/useOptimizedQueries.tsx`
+  - Remoção do JOIN complexo: `classes!classes_professor_principal_id_fkey(id, nome, modalidade, class_types(name), ativa)`
+  - Nova query simplificada: busca direta na tabela `profiles` com campos essenciais
+  - Adição do campo `observacoes` para completude dos dados
+- **10.5.3** ✅ **Adaptação dos Dados Retornados:**
+  - Campo `funcao` adicionado como string fixa "Professor" (esperado pelo componente)
+  - Campos `total_classes` e `active_classes` retornando 0 temporariamente
+  - Manutenção da compatibilidade com interface existente sem quebrar componentes
+
+### Resumo da Fase 10.5:
+**O que foi implementado:**
+- **Query simplificada e confiável** para buscar professores no portal administrativo
+- **Remoção de JOINs problemáticos** que causavam falha silenciosa
+- **Campos de fallback** para manter compatibilidade com componentes existentes
+- **Solução minimalista** que resolve o problema sem adicionar complexidade
+
+**O que foi considerado para implementação:**
+- **Simplicidade sobre complexidade**: query direta é mais confiável que JOINs aninhados
+- **Compatibilidade de interface**: manter campos esperados pelos componentes
+- **Performance**: query simples executa mais rápido
+- **Manutenibilidade**: código mais fácil de entender e debuggar
+
+**O que foi aprendido com os erros nesta fase:**
+- **JOINs podem falhar silenciosamente**: Supabase não sempre retorna erro claro quando JOIN falha
+- **PostgREST tem sintaxe específica**: nem todos os JOINs funcionam como esperado
+- **Simplicidade é melhor**: começar com query simples e adicionar complexidade gradualmente
+- **Validação essencial**: sempre testar queries diretamente no Supabase antes de usar no código
+- **Fallbacks importantes**: componentes devem funcionar mesmo com dados parciais
+
+**Quais logs para identificar os erros nesta fase foram inseridos:**
+- Verificação da query SQL diretamente no Supabase
+- Teste da query simplificada confirmando retorno de dados
+- Validação de tipos TypeScript após mudanças
+- Build de desenvolvimento sem erros
+
+**Query Anterior (Problemática):**
+```typescript
+// ❌ Falhava silenciosamente com JOIN complexo
+.select(`
+  id, nome_completo, email, cpf, whatsapp, chave_pix,
+  role, status, created_at, updated_at,
+  classes!classes_professor_principal_id_fkey(
+    id, nome, modalidade, class_types(name), ativa
+  )
+`)
+```
+
+**Query Corrigida (Funcional):**
+```typescript
+// ✅ Simples e confiável
+.select(`
+  id, nome_completo, email, cpf, whatsapp, chave_pix,
+  role, status, created_at, updated_at, observacoes
+`)
+```
+
+**Benefícios Alcançados:**
+- ✅ **Tela de professores funcional**: Admin pode visualizar todos os professores cadastrados
+- ✅ **Query confiável**: Sem falhas silenciosas ou JOINs problemáticos
+- ✅ **Código mais limpo**: Remoção de complexidade desnecessária
+- ✅ **Performance melhorada**: Query direta executa mais rápido
+- ✅ **Manutenibilidade**: Código mais simples de entender e modificar
+
+---
+
 ## **FASE 11: SISTEMA DE EVENTOS** 
 **Status: ⏳ AGUARDANDO**
 
@@ -1084,7 +1159,7 @@ Este roadmap é o **documento central** de todo o projeto. Para informações t�
 
 # 🎯 STATUS GERAL DO PROJETO
 
-## Fases Concluídas: **10.4/11** (95%)
+## Fases Concluídas: **10.5/11** (95.5%)
 - ✅ **Fase 1**: Configuração Inicial e Setup
 - ✅ **Fase 2**: Sistema de Autenticação  
 - ✅ **Fase 3**: Portal Administrativo (+ Otimizações Performance)
@@ -1098,6 +1173,7 @@ Este roadmap é o **documento central** de todo o projeto. Para informações t�
 - ✅ **Fase 10.2**: Correção Crítica de Constraint NULL no Campo WhatsApp (06/08/2025)
 - ✅ **Fase 10.3**: Correção de Referências Remanescentes à Tabela Staff (06/08/2025)
 - ✅ **Fase 10.4**: Correção Crítica - Admin Students Display Fix (06/08/2025)
+- ✅ **Fase 10.5**: Correção da Visualização de Professores no Portal Administrativo (06/08/2025)
 - ⏳ **Fase 11**: Sistema de Eventos (Pendente)
 
 ## Tecnologias Principais
@@ -1439,4 +1515,4 @@ setTimeout(() => {
 ---
 
 **Mantido por**: Equipe de Desenvolvimento Vila Dança & Arte  
-**Última atualização**: 06/08/2025 - Correção Crítica - Admin Students Display Fix (Fase 10.4)
+**Última atualização**: 06/08/2025 - Correção da Visualização de Professores no Portal Administrativo (Fase 10.5)

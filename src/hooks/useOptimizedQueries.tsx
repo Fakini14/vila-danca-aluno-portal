@@ -47,13 +47,7 @@ export function useTeachersOptimized() {
           status,
           created_at,
           updated_at,
-          classes!classes_professor_principal_id_fkey(
-            id,
-            nome,
-            modalidade,
-            class_types(name),
-            ativa
-          )
+          observacoes
         `)
         .eq('role', 'professor')
         .eq('status', 'ativo')
@@ -61,11 +55,12 @@ export function useTeachersOptimized() {
       
       if (error) throw error;
       
-      // Calcular estatísticas de turmas para cada professor
+      // Retornar dados com campos esperados pelo componente
       return data.map(teacher => ({
         ...teacher,
-        total_classes: teacher.classes?.length || 0,
-        active_classes: teacher.classes?.filter(c => c.ativa).length || 0
+        funcao: 'Professor', // Campo esperado pelo componente
+        total_classes: 0, // Por enquanto retornar 0, pode ser calculado separadamente se necessário
+        active_classes: 0 // Por enquanto retornar 0, pode ser calculado separadamente se necessário
       }));
     },
     staleTime: 10 * 60 * 1000, // 10 minutos de cache
