@@ -35,6 +35,12 @@ interface Profile {
   email: string;
   role: 'admin' | 'professor' | 'funcionario' | 'aluno';
   status: 'ativo' | 'inativo';
+  data_nascimento?: string | null;
+  sexo?: 'masculino' | 'feminino' | 'outro' | null;
+  endereco_completo?: string | null;
+  cep?: string | null;
+  chave_pix?: string | null;
+  observacoes?: string | null;
 }
 
 interface UserSignUpData {

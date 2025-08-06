@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { StudentProfileForm } from '@/components/student/StudentProfileForm';
+import { StaffProfileForm } from '@/components/admin/StaffProfileForm';
 
 export default function Profile() {
   const { profile } = useAuth();
@@ -31,14 +32,7 @@ export default function Profile() {
         {profile?.role === 'aluno' ? (
           <StudentProfileForm />
         ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              Edição de perfil para {profile?.role === 'admin' ? 'administradores' : 
-                                   profile?.role === 'professor' ? 'professores' :
-                                   profile?.role === 'funcionario' ? 'funcionários' : 'usuários'} 
-              será implementada em breve.
-            </p>
-          </div>
+          <StaffProfileForm />
         )}
       </div>
     </Layout>
