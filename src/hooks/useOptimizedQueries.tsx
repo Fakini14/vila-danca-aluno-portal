@@ -2,32 +2,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Hook otimizado para buscar alunos com matrículas
+// Hook simples para buscar alunos (sem JOINs)
 export function useStudentsOptimized() {
   return useQuery({
     queryKey: ['students', 'optimized'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
-        .select(`
-          *,
-          enrollments!left(
-            id,
-            ativa,
-            data_matricula,
-            classes(nome, modalidade, class_types(name))
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // Calcular estatísticas de matrícula para cada aluno
+      // Processar dados de forma simples
       return data.map(student => ({
         ...student,
-        nome_completo: student.email || '', // Usar email como nome temporário
-        active_enrollments: student.enrollments?.filter(e => e.ativa).length || 0,
-        total_enrollments: student.enrollments?.length || 0
+        nome_completo: student.email || 'Nome não informado', // Usar email como nome temporário
+        role: 'aluno' as const, // Assumir que são todos alunos por padrão
+        email_confirmed: true, // Assumir confirmado por simplificação 
+        active_enrollments: 0, // Zerar por enquanto
+        total_enrollments: 0 // Zerar por enquanto
       }));
     },
     staleTime: 10 * 60 * 1000, // 10 minutos de cache

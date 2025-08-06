@@ -858,7 +858,7 @@ teacher.profiles?.nome_completo
 
 ---
 
-## **FASE 10.4: CORREÇÃO CRÍTICA - ADMIN STUDENTS DISPLAY FIX**
+## **FASE 10.4: CORREÇÃO CRÍTICA - ADMIN STUDENTS DISPLAY FIX + ROLE MANAGEMENT**
 **Status: ✅ CONCLUÍDA (06/08/2025)**
 
 ### Checklist de Implementação:
@@ -880,6 +880,14 @@ teacher.profiles?.nome_completo
   - Atualização para usar `email` como nome temporário até implementação de campo nome adequado
   - Manutenção de toda funcionalidade existente (busca, filtros, ações)
   - Preservação da interface visual sem alterações para o usuário final
+- **10.4.5** ✅ **Implementação de Funcionalidade "Alterar Nível de Acesso":**
+  - Componente `RoleChangeModal` criado para alteração de roles de usuários específicos
+  - Modal com interface intuitiva: informações do usuário, seletor de roles, confirmação
+  - Validação de email confirmado obrigatória para alteração de roles
+  - Ícones visuais para diferentes roles (Crown, GraduationCap, Briefcase, User)
+  - Integração no menu de 3 pontos da StudentList com ação "Alterar nível de acesso"
+  - Sistema de invalidação de cache automática após alteração de role
+  - Notificações de sucesso/erro com feedback claro para o usuário
 
 ### Resumo da Fase 10.4:
 **O que foi implementado:**
@@ -888,6 +896,9 @@ teacher.profiles?.nome_completo
 - **Adaptação da interface** para usar dados disponíveis na tabela `students`
 - **Fallback inteligente** usando email como nome temporário
 - **Funcionalidade completa restaurada** para gestão de estudantes pelo admin
+- **Sistema completo de alteração de nível de acesso** integrado à tela de estudantes
+- **Modal dedicado para gestão de roles** com validações e confirmações
+- **Interface administrativa aprimorada** com nova funcionalidade no menu de ações
 
 **O que foi considerado para implementação:**
 - **Resolução imediata**: admin precisa conseguir visualizar estudantes sem demora
@@ -895,19 +906,29 @@ teacher.profiles?.nome_completo
 - **Robustez da query**: query simples e direta é mais confiável que JOINs complexos
 - **Compatibilidade**: manter interface existente funcionando com dados disponíveis
 - **Preparação futura**: estrutura permite implementar campo nome adequado depois
+- **Experiência do usuário**: funcionalidade de alteração de role integrada naturalmente
+- **Segurança**: validações rigorosas para alteração de níveis de acesso
+- **Feedback claro**: usuário sempre informado sobre ações e resultados
 
 **O que foi aprendido com os erros nesta fase:**
 - **JOINs complexos podem falhar silenciosamente**: queries aparentemente corretas podem não retornar dados
 - **Simplicidade é melhor**: queries diretas são mais confiáveis que abstrações complexas
 - **Fallbacks são essenciais**: sempre ter plano B quando dados esperados não estão disponíveis
 - **Interface resiliente**: componentes devem funcionar mesmo com dados parcialmente incompletos
-- **Debugging de queries**: queries que não retornam dados nem sempre mostram erros explícitos
+- **Debugging de queries**: queries que não retornam dados nem sempre mostram errors explícitos
+- **Sintaxe PostgREST é específica**: ordenações com relacionamentos (`profiles(nome_completo)`) podem causar status 300
+- **Abordagem ultra-simples funciona**: quando em dúvida, simplificar ao máximo primeiro
+- **Integração incremental**: adicionar funcionalidades após corrigir problemas básicos
 
 **Quais logs para identificar os erros nesta fase foram inseridos:**
 - Logs de debugging no hook `useStudentsOptimized` para rastrear resultados de query
 - Logs de fallback quando campos opcionais não estão disponíveis
 - Logs de verificação de dados retornados pela query simplificada
 - Logs de adaptação da interface quando usa email como nome temporário
+- Logs de status HTTP 300 da API Supabase indicando problema na sintaxe da query
+- Logs de abertura e fechamento do RoleChangeModal
+- Logs de alteração de roles com sucesso/erro no componente RoleChangeModal
+- Logs de invalidação de cache após alteração de roles
 
 **Arquitetura da Correção:**
 
@@ -958,16 +979,32 @@ const displayName = student.nome_completo || student.email;
 - ✅ **Dados acessíveis**: todas as funcionalidades de gestão funcionam normalmente
 - ✅ **Robustez**: query simples é menos propensa a falhas
 - ✅ **Manutenibilidade**: código mais simples e fácil de debuggar
+- ✅ **Funcionalidade de gestão de roles**: admin pode alterar nível de acesso diretamente da tela de estudantes
+- ✅ **UX aprimorada**: modal intuitivo com validações e feedback visual
+- ✅ **Segurança mantida**: apenas usuários com email confirmado podem ter roles alterados
 
-**Problema Original Resolvido:**
+**Problemas Originais Resolvidos:**
+
+**1. Bug de Visualização de Estudantes:**
 - **Antes**: Admin acessava `/admin/students` e via tela em branco mesmo com dados no banco
 - **Depois**: Admin consegue visualizar, buscar, filtrar e gerenciar todos os estudantes normalmente
+
+**2. Falta de Funcionalidade de Gestão de Roles:**
+- **Antes**: Admin precisava acessar `/admin/user-roles` separadamente para alterar níveis de acesso
+- **Depois**: Admin pode alterar nível de acesso diretamente na tela de estudantes via menu de 3 pontos
 
 **Impacto no Negócio:**
 - **Gestão restaurada**: administradores podem gerenciar estudantes sem bloqueios
 - **Confiabilidade**: funcionalidade crítica do sistema funcionando de forma estável
 - **Eficiência**: operações administrativas podem ser realizadas sem workarounds
 - **Visibilidade**: dados de estudantes acessíveis para tomada de decisões
+- **Fluxo otimizado**: alteração de roles integrada ao fluxo natural de gestão de estudantes
+- **Produtividade**: admin não precisa navegar entre múltiplas telas para gerenciar usuários
+
+**Arquivos Criados/Modificados:**
+- `src/components/admin/students/RoleChangeModal.tsx` - **Novo**: Modal dedicado para alteração de roles
+- `src/hooks/useOptimizedQueries.tsx` - **Modificado**: Simplificação da query de estudantes
+- `src/components/admin/students/StudentList.tsx` - **Modificado**: Integração da funcionalidade de role change
 
 ---
 

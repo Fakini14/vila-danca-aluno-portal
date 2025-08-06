@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Users, Eye, UserCheck, UserX } from 'lucide-react';
+import { Users, Eye, UserCheck, UserX, UserCog } from 'lucide-react';
 import { DataTable, Column, ActionButton, StatusBadge } from '@/components/shared/DataTable';
 import { useStudentsOptimized } from '@/hooks/useOptimizedQueries';
 import { useUpdateStudentStatus } from '@/hooks/useStudents';
+import { RoleChangeModal } from './RoleChangeModal';
 
 interface StudentData {
   id: string;
@@ -20,6 +22,9 @@ interface StudentData {
   auth_status: 'pending' | 'active';
   created_at: string;
   updated_at: string;
+  // Campos do perfil (vêm do join com profiles)
+  role: 'admin' | 'professor' | 'funcionario' | 'aluno';
+  email_confirmed: boolean;
   // Campos calculados
   active_enrollments: number;
   total_enrollments: number;
@@ -28,7 +33,16 @@ interface StudentData {
 export function StudentList() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [roleChangeModal, setRoleChangeModal] = useState<{
+    isOpen: boolean;
+    student: StudentData | null;
+  }>({
+    isOpen: false,
+    student: null,
+  });
+  
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: students = [], isLoading, error } = useStudentsOptimized();
   const updateStudentStatus = useUpdateStudentStatus();
 
@@ -57,6 +71,19 @@ export function StudentList() {
 
   const handleRejectStudent = (student: StudentData) => {
     updateStudentStatus.mutate({ id: student.id, status: 'rejected' });
+  };
+
+  const handleChangeRole = (student: StudentData) => {
+    setRoleChangeModal({
+      isOpen: true,
+      student,
+    });
+  };
+
+  const handleRoleChanged = () => {
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ['students', 'optimized'] });
+    queryClient.invalidateQueries({ queryKey: ['stats', 'quick'] });
   };
 
   // Define table columns
@@ -120,6 +147,12 @@ export function StudentList() {
       label: 'Visualizar',
       icon: <Eye className="h-4 w-4" />,
       onClick: handleViewStudent
+    },
+    {
+      label: 'Alterar nível de acesso',
+      icon: <UserCog className="h-4 w-4" />,
+      onClick: handleChangeRole,
+      show: (student) => student.email_confirmed
     },
     {
       label: 'Aprovar',
@@ -280,6 +313,16 @@ export function StudentList() {
             </Select>
           </>
         )}
+      />
+
+      {/* Role Change Modal */}
+      <RoleChangeModal
+        student={roleChangeModal.student}
+        isOpen={roleChangeModal.isOpen}
+        onOpenChange={(open) => 
+          setRoleChangeModal(prev => ({ ...prev, isOpen: open }))
+        }
+        onRoleChanged={handleRoleChanged}
       />
     </div>
   );
