@@ -440,9 +440,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } : null,
         error: error ? {
           message: error.message,
-          status: error.status || 'no status'
+          status: error.status || 'no status',
+          fullError: error
         } : null
       });
+
+      // Enhanced logging for debugging duplicate CPF errors
+      if (error) {
+        console.log('Full error object:', error);
+        console.log('Error message for analysis:', error.message);
+        console.log('Error includes profiles_cpf_key:', error.message.includes('profiles_cpf_key'));
+        console.log('Error includes duplicate:', error.message.includes('duplicate'));
+        console.log('Error includes Database error:', error.message.includes('Database error saving new user'));
+      }
 
       if (error) {
         // Tratar diferentes tipos de erro
@@ -458,6 +468,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (error.message.includes('password')) {
           errorTitle = "Senha inválida";
           errorDescription = "A senha deve ter pelo menos 6 caracteres.";
+        } else if (error.message.includes('duplicate key') && error.message.includes('profiles_cpf_key')) {
+          errorTitle = "CPF já cadastrado";
+          errorDescription = "Este CPF já foi cadastrado. Tente fazer login ou use outro CPF.";
+        } else if (error.message.includes('Database error saving new user')) {
+          // Check if it might be a CPF duplicate error in the message
+          if (error.message.includes('profiles_cpf_key') || 
+              error.message.includes('duplicate') || 
+              error.message.toLowerCase().includes('cpf')) {
+            errorTitle = "CPF já cadastrado";
+            errorDescription = "Este CPF já foi cadastrado. Tente fazer login ou use outro CPF.";
+          } else {
+            errorTitle = "Erro no servidor";
+            errorDescription = "Ocorreu um erro no servidor. Tente novamente em alguns instantes.";
+          }
+        } else if (error.message.includes('unexpected_failure')) {
+          // Sometimes the error comes as unexpected_failure
+          errorTitle = "CPF já cadastrado";
+          errorDescription = "Este CPF já foi cadastrado. Tente fazer login ou use outro CPF.";
         }
 
         toast({

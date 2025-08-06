@@ -240,12 +240,11 @@ export default function Auth() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-whatsapp">WhatsApp</Label>
+                  <Label htmlFor="signup-whatsapp">WhatsApp (Opcional)</Label>
                   <Input
                     id="signup-whatsapp"
                     name="whatsapp"
                     type="tel"
-                    required
                     placeholder="(00) 00000-0000"
                     autoComplete="tel"
                   />
@@ -275,10 +274,10 @@ export default function Auth() {
                 
                 {/* Additional student fields */}
                 <div className="space-y-2">
-                  <Label htmlFor="signup-sexo">Sexo</Label>
-                  <Select name="sexo" required>
+                  <Label htmlFor="signup-sexo">Sexo (Opcional)</Label>
+                  <Select name="sexo">
                     <SelectTrigger id="signup-sexo">
-                      <SelectValue placeholder="Selecione o sexo" />
+                      <SelectValue placeholder="Selecione o sexo (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="masculino">Masculino</SelectItem>
@@ -328,7 +327,7 @@ export default function Auth() {
                     disabled={isLoading}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar Conta
+                    {isLoading ? 'Criando conta...' : 'Criar Conta'}
                   </Button>
                   <div className="text-center text-sm text-muted-foreground">
                     Já tem uma conta?{' '}
@@ -386,7 +385,7 @@ export default function Auth() {
                     disabled={isLoading}
                   >
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Entrar
+                    {isLoading ? 'Entrando...' : 'Entrar'}
                   </Button>
                   <div className="flex flex-col gap-2 text-center text-sm">
                     <button
