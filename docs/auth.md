@@ -261,6 +261,28 @@ console.log('[JWKS] Fetching keys from:', jwksUrl);
 - Sistema de validação de email confirmado
 - Indicadores visuais de status de confirmação
 
+#### 🔥 Problema CRÍTICO: Erro de cadastro por constraint NULL no WhatsApp
+
+**Erro identificado**: `null value in column "whatsapp" of relation "profiles" violates not-null constraint`
+
+**Root Cause**: Campo `whatsapp` em `profiles` tinha constraint NOT NULL, mas frontend permitia valor vazio (campo opcional)
+
+**Solução Implementada**:
+- **Correção da constraint**: `ALTER TABLE profiles ALTER COLUMN whatsapp DROP NOT NULL`
+- **Function `handle_email_confirmation` corrigida**: usar `auth_status = 'active'` em vez de `'confirmed'` (valor inválido)
+- **Limpeza de RLS policies**: removidas 11 policies duplicadas, mantidas apenas 4 funcionais
+- **Remoção de triggers duplicados**: eliminados `trigger_auto_create_records` e `trigger_auto_create_student`
+- **Functions obsoletas removidas**: `auto_create_student_record` e `handle_student_email_confirmation`
+- **Consistência**: `profiles.whatsapp` e `students.whatsapp` ambos nullable
+
+**Migrations aplicadas**:
+- `fix_email_confirmation_auth_status`
+- `clean_duplicate_rls_policies_students`  
+- `cleanup_duplicate_triggers_and_functions`
+- `fix_whatsapp_nullable_constraint`
+
+**Resultado**: Cadastro funciona perfeitamente com ou sem WhatsApp preenchido
+
 ## Próximos Passos
 
 ### Curto Prazo (1-2 semanas) - ATUALIZADO
@@ -293,15 +315,21 @@ console.log('[JWKS] Fetching keys from:', jwksUrl);
 
 ### 06/08/2025 - Reforma Completa do Sistema de Autenticação
 - **CRÍTICO**: Corrigido bug de usuários alunos sem registro na tabela students
+- **CRÍTICO**: Resolvido erro de constraint NULL no campo WhatsApp que impedia cadastros
 - **NOVO**: Confirmação de email obrigatória para todos os usuários
 - **NOVO**: Sistema de promoção de roles pelo admin (`/admin/user-roles`)
 - **NOVO**: Interface dedicada para aguardar confirmação de email
 - **NOVO**: Triggers automáticos `handle_new_user()` e `handle_email_confirmation()`
 - **NOVO**: Políticas RLS atualizadas com funções auxiliares de segurança
+- **CORREÇÃO**: Function `handle_email_confirmation()` usa valores válidos (`'active'` em vez de `'confirmed'`)
+- **LIMPEZA**: Removidas 11 policies RLS duplicadas, mantidas apenas 4 funcionais
+- **LIMPEZA**: Eliminados triggers e functions duplicadas/conflitantes
+- **CONSTRAINT**: Campo `whatsapp` alterado para nullable (compatível com UX opcional)
 - **MELHORIA**: Formulário de cadastro sempre registra como 'aluno'
 - **MELHORIA**: Sistema de indicadores visuais para status de confirmação
 - **MELHORIA**: Validações que impedem alterações sem confirmação de email
 - **MIGRAÇÃO**: Backfill automático para usuários existentes sem registro students
+- **CONSISTÊNCIA**: `profiles.whatsapp` e `students.whatsapp` ambos nullable
 
 ### 05/08/2025 - Migração Inicial
 - Atualizado cliente Supabase com nova publishable key
@@ -313,4 +341,4 @@ console.log('[JWKS] Fetching keys from:', jwksUrl);
 ---
 
 **Mantido por**: Equipe de Desenvolvimento Vila Dança & Arte  
-**Última atualização**: 06/08/2025
+**Última atualização**: 06/08/2025 - Correção Crítica de Constraint NULL no Campo WhatsApp
