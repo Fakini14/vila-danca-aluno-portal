@@ -180,6 +180,7 @@ export default function Auth() {
                     type="email"
                     required
                     placeholder="seu@email.com"
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -224,6 +225,7 @@ export default function Auth() {
                     type="text"
                     required
                     placeholder="Seu nome completo"
+                    autoComplete="name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -234,6 +236,7 @@ export default function Auth() {
                     type="text"
                     required
                     placeholder="000.000.000-00"
+                    autoComplete="off"
                   />
                 </div>
                 <div className="space-y-2">
@@ -241,9 +244,10 @@ export default function Auth() {
                   <Input
                     id="signup-whatsapp"
                     name="whatsapp"
-                    type="text"
+                    type="tel"
                     required
                     placeholder="(00) 00000-0000"
+                    autoComplete="tel"
                   />
                 </div>
                 <div className="space-y-2">
@@ -254,6 +258,7 @@ export default function Auth() {
                     type="email"
                     required
                     placeholder="seu@email.com"
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -264,6 +269,7 @@ export default function Auth() {
                     type="password"
                     required
                     placeholder="••••••••"
+                    autoComplete="new-password"
                   />
                 </div>
                 
@@ -271,7 +277,7 @@ export default function Auth() {
                 <div className="space-y-2">
                   <Label htmlFor="signup-sexo">Sexo</Label>
                   <Select name="sexo" required>
-                    <SelectTrigger>
+                    <SelectTrigger id="signup-sexo">
                       <SelectValue placeholder="Selecione o sexo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -289,6 +295,7 @@ export default function Auth() {
                     name="data_nascimento"
                     type="date"
                     placeholder="DD/MM/AAAA"
+                    autoComplete="bday"
                   />
                 </div>
                 
@@ -299,6 +306,7 @@ export default function Auth() {
                     name="endereco_completo"
                     placeholder="Endereço completo..."
                     rows={2}
+                    autoComplete="street-address"
                   />
                 </div>
                 
@@ -309,6 +317,7 @@ export default function Auth() {
                     name="cep"
                     type="text"
                     placeholder="00000-000"
+                    autoComplete="postal-code"
                   />
                 </div>
                 
@@ -356,6 +365,7 @@ export default function Auth() {
                     type="email"
                     required
                     placeholder="seu@email.com"
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -366,6 +376,7 @@ export default function Auth() {
                     type="password"
                     required
                     placeholder="••••••••"
+                    autoComplete="current-password"
                   />
                 </div>
                 <div className="space-y-2">
