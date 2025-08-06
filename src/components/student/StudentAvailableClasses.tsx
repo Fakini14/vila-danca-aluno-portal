@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, Users, MapPin, ShoppingCart, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock, Calendar, Users, MapPin, ShoppingCart, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useAsaasCustomer } from '@/hooks/useAsaasCustomer';
 
 interface Class {
   id: string;
@@ -37,8 +39,12 @@ export function StudentAvailableClasses() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrollingClass, setEnrollingClass] = useState<string | null>(null);
+  const [validatingStudent, setValidatingStudent] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { ensureAsaasCustomer, validateStudentData } = useAsaasCustomer();
 
   const fetchAvailableClasses = useCallback(async () => {
     try {
@@ -166,7 +172,8 @@ export function StudentAvailableClasses() {
     return colors[modalidade] || colors.default;
   };
 
-  const handleEnrollment = async (classItem: Class) => {
+  // Função para pré-validar dados do estudante
+  const handlePreValidation = async (classItem: Class) => {
     if (!profile?.id) {
       toast({
         title: 'Erro',
@@ -176,13 +183,59 @@ export function StudentAvailableClasses() {
       return;
     }
 
+    setValidatingStudent(classItem.id);
+    setValidationError(null);
+
+    try {
+      // Primeiro validar dados do estudante
+      console.log('🔍 Pré-validação: Verificando dados do estudante...');
+      const validation = await validateStudentData(profile.id);
+      
+      if (!validation.valid) {
+        const missingFields = validation.missing.join(', ');
+        setValidationError(`Para se matricular, é necessário completar os seguintes dados em seu perfil: ${missingFields}`);
+        toast({
+          title: 'Dados incompletos',
+          description: `Complete os dados em seu perfil: ${missingFields}`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      console.log('✅ Pré-validação: Dados do estudante válidos!');
+      toast({
+        title: 'Dados validados',
+        description: 'Seus dados foram validados. Iniciando processo de matrícula...',
+      });
+
+      // Se chegou até aqui, pode prosseguir com a matrícula
+      await proceedWithEnrollment(classItem);
+
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro na validação dos dados';
+      console.error('❌ Erro na pré-validação:', error);
+      setValidationError(errorMessage);
+      toast({
+        title: 'Erro na validação',
+        description: error instanceof Error ? error.message : 'Não foi possível validar seus dados',
+        variant: 'destructive'
+      });
+    } finally {
+      setValidatingStudent(null);
+    }
+  };
+
+  // Função para prosseguir com a matrícula após validação
+  const proceedWithEnrollment = async (classItem: Class) => {
+    if (!profile?.id) return;
+
     setEnrollingClass(classItem.id);
 
     try {
       const enrollmentDate = new Date().toISOString().split('T')[0];
-      const monthlyValue = classItem.valor_aula || 150; // Use valor_aula for monthly subscription
+      const monthlyValue = classItem.valor_aula || 150;
 
-      // First, check if enrollment already exists (active or inactive)
+      // Check if enrollment already exists (active or inactive)
       const { data: existingEnrollment, error: checkError } = await supabase
         .from('enrollments')
         .select('id, ativa')
@@ -219,14 +272,14 @@ export function StudentAvailableClasses() {
           enrollment = reactivatedEnrollment;
         }
       } else {
-        // Create new enrollment (initially inactive - will be activated after first payment)
+        // Create new enrollment (initially inactive)
         const { data: newEnrollment, error: enrollmentError } = await supabase
           .from('enrollments')
           .insert({
             student_id: profile.id,
             class_id: classItem.id,
             data_matricula: enrollmentDate,
-            valor_pago_matricula: 0, // No enrollment fee for subscriptions
+            valor_pago_matricula: 0,
             ativa: false, // Will be activated after first payment
           })
           .select()
@@ -237,12 +290,13 @@ export function StudentAvailableClasses() {
       }
 
       // Call create-subscription-checkout edge function
+      console.log('🚀 Criando checkout de assinatura...');
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-subscription-checkout', {
         body: {
           student_id: profile.id,
           enrollment_id: enrollment.id,
           class_id: classItem.id,
-          billing_type: 'CREDIT_CARD', // Default to credit card for better UX
+          billing_type: 'CREDIT_CARD',
           customer: {
             name: profile.nome_completo,
             email: profile.email,
@@ -251,18 +305,16 @@ export function StudentAvailableClasses() {
           },
           value: monthlyValue,
           class_name: classItem.nome || classItem.modalidade,
-          due_day: 10 // Default to 10th of each month
+          due_day: 10
         }
       });
 
       if (checkoutError) {
-        console.error('Checkout creation error:', checkoutError);
+        console.error('❌ Checkout creation error:', checkoutError);
         
-        // Verificar se há uma mensagem de erro específica do usuário
         const errorData = checkoutError.context?.body;
         const userMessage = errorData?.userMessage || checkoutError.message;
         
-        // Se for erro de configuração, mostrar mensagem especial
         if (errorData?.error?.includes('Asaas credentials not configured') || checkoutError.status === 503) {
           toast({
             title: 'Configuração Pendente',
@@ -276,7 +328,7 @@ export function StudentAvailableClasses() {
       }
 
       if (checkoutData?.checkout?.url) {
-        // Redirect to Asaas checkout page
+        console.log('✅ Checkout criado com sucesso, redirecionando...');
         window.location.href = checkoutData.checkout.url;
       } else {
         toast({
@@ -287,11 +339,10 @@ export function StudentAvailableClasses() {
       }
 
     } catch (error: unknown) {
-      console.error('Erro ao iniciar matrícula:', error);
+      console.error('❌ Erro ao criar matrícula:', error);
       
       let errorMessage = 'Não foi possível iniciar o processo de matrícula. Tente novamente.';
       
-      // Handle specific error cases
       const errorObj = error as { code?: string; message?: string; status?: number };
       if (errorObj?.code === '23505' || errorObj?.message?.includes('duplicate key')) {
         errorMessage = 'Você já possui uma matrícula para esta turma. Verifique suas assinaturas ativas.';
@@ -302,7 +353,6 @@ export function StudentAvailableClasses() {
       } else if (errorObj?.message?.includes('Configuração Pendente') || errorObj?.message?.includes('Asaas credentials')) {
         errorMessage = 'O sistema de pagamento ainda não foi configurado. Entre em contato com a administração.';
       } else if (errorObj?.message) {
-        // Use a mensagem do erro se disponível
         errorMessage = errorObj.message;
       }
       
@@ -314,6 +364,11 @@ export function StudentAvailableClasses() {
     } finally {
       setEnrollingClass(null);
     }
+  };
+
+  // Função principal que iniciará todo o processo
+  const handleEnrollment = (classItem: Class) => {
+    handlePreValidation(classItem);
   };
 
   if (loading) {
@@ -332,6 +387,20 @@ export function StudentAvailableClasses() {
           Descubra novas modalidades e expanda seus conhecimentos.
         </p>
       </div>
+
+      {/* Alert de erro de validação */}
+      {validationError && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {validationError}
+            <br />
+            <span className="text-sm mt-2">
+              Para completar seus dados, acesse Configurações → Perfil no menu do sistema.
+            </span>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {classes.map((classItem) => {
@@ -414,10 +483,15 @@ export function StudentAvailableClasses() {
                   
                   <Button 
                     className="w-full" 
-                    disabled={isFull || enrollingClass === classItem.id}
+                    disabled={isFull || enrollingClass === classItem.id || validatingStudent === classItem.id}
                     onClick={() => handleEnrollment(classItem)}
                   >
-                    {enrollingClass === classItem.id ? (
+                    {validatingStudent === classItem.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Validando dados...
+                      </>
+                    ) : enrollingClass === classItem.id ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Criando assinatura...

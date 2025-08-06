@@ -4,7 +4,7 @@
 
 Este documento consolida todo o conhecimento sobre o sistema de autenticação do Vila Dança & Arte, incluindo a migração para JWT Signing Keys assimétricos do Supabase.
 
-## Estado Atual (05/08/2025)
+## Estado Atual (06/08/2025)
 
 ### Chaves de API Atualizadas
 
@@ -22,16 +22,27 @@ Este documento consolida todo o conhecimento sobre o sistema de autenticação d
 
 ## Arquitetura de Autenticação
 
-### Fluxo de Autenticação
+### Fluxo de Autenticação Completo (Atualizado 06/08/2025)
 
 ```mermaid
 graph TD
-    A[Usuário] -->|Login| B[Supabase Auth]
-    B -->|JWT Assimétrico| C[Cliente React]
-    C -->|Verifica Localmente| D[Claims do Token]
-    C -->|Requisições| E[API/Database]
-    E -->|RLS Policies| F[Dados Autorizados]
+    A[Usuário se Cadastra] -->|Sempre como 'aluno'| B[Trigger handle_new_user]
+    B -->|Cria Profile + Student| C[Email de Confirmação]
+    C -->|Confirma Email| D[Email_confirmed_at atualizado]
+    D -->|Trigger handle_email_confirmation| E[Auth_status = 'confirmed']
+    E -->|Login Autorizado| F[JWT Token Válido]
+    F -->|Admin Promove Role| G[Sistema de Roles]
+    G -->|RLS Policies| H[Acesso Controlado]
 ```
+
+### Novo Fluxo de Registro (06/08/2025)
+
+1. **Registro**: Usuário sempre se cadastra como 'aluno'
+2. **Trigger**: `handle_new_user()` cria registros em `profiles` e `students`
+3. **Email**: Sistema envia confirmação automaticamente
+4. **Bloqueio**: Acesso negado até confirmação de email
+5. **Confirmação**: Trigger `handle_email_confirmation()` atualiza status
+6. **Promoção**: Admin pode alterar role via interface dedicada
 
 ### Componentes Principais
 
@@ -40,17 +51,24 @@ graph TD
 - Novo método `getTokenClaims()` para leitura rápida de claims
 - Método `verifySession()` otimizado com verificação local
 - Sincronização automática com Supabase Auth
+- **NOVO**: Forçar cadastro sempre como 'aluno' no `signUp()`
 
-#### 2. Cliente Supabase (`src/integrations/supabase/client.ts`)
-- Configurado com nova publishable key
-- Preparado para verificação assimétrica (quando disponível na lib)
-- Mantém compatibilidade com sistema atual
+#### 2. ProtectedRoute (`src/components/ProtectedRoute.tsx`)
+- **NOVO**: Verificação obrigatória de email confirmado
+- Tela dedicada para aguardar confirmação
+- Botão para reenviar email de confirmação
+- Bloqueio completo até confirmação
 
-#### 3. Utilitários JWKS (`src/utils/auth/jwks.ts`)
-- Cache de chaves públicas (10 minutos)
-- Descoberta automática via endpoint `.well-known/jwks.json`
-- Limpeza automática de cache expirado
-- Helpers para decodificação de JWT
+#### 3. UserRoleManager (`src/components/admin/UserRoleManager.tsx`)
+- **NOVO**: Interface para promoção de roles pelo admin
+- Indicadores visuais de status de confirmação de email
+- Validação que impede mudança de role sem confirmação
+- Tooltips e sistema de feedback
+
+#### 4. Triggers do Banco de Dados
+- **NOVO**: `handle_new_user()` - Cria profiles + students automaticamente
+- **NOVO**: `handle_email_confirmation()` - Atualiza auth_status na confirmação
+- Sincronização automática entre auth.users e tabelas públicas
 
 ## Otimizações Implementadas
 
@@ -73,11 +91,19 @@ if (claims && claims.exp > Date.now() / 1000) {
 - Fallback para cache expirado em caso de erro
 - Limpeza automática a cada 30 minutos
 
-### 3. Confirmação de Email Otimizada
+### 3. Confirmação de Email Obrigatória (NOVA IMPLEMENTAÇÃO)
 
-- Decodifica JWT para verificar `email_verified` claim
-- Reduz latência na página de confirmação
-- Mantém fallback para método tradicional
+- **Bloqueio Total**: Usuários não podem acessar sem confirmar email
+- **Interface Dedicada**: Tela específica com instruções e reenvio
+- **Triggers Automáticos**: Atualização automática de status na confirmação
+- **Validação de Roles**: Promoção só permitida após confirmação
+
+### 4. Correção do Bug Crítico dos Registros Students
+
+- **Problema**: Usuários 'aluno' só tinham registro em profiles, não em students
+- **Solução**: Trigger atualizado para criar ambos os registros
+- **Migração**: Backfill automático para usuários existentes
+- **Sincronização**: Dados mantidos em sincronia entre tabelas
 
 ## Estrutura dos JWT Claims
 
@@ -113,20 +139,56 @@ interface JWTClaims {
 
 ## Configuração de Segurança
 
-### Políticas RLS (Row Level Security)
+### Políticas RLS (Row Level Security) - ATUALIZADAS 06/08/2025
 
-Todas as tabelas usam RLS baseado nos claims do JWT:
+Sistema de segurança baseado em confirmação de email e roles:
 
 ```sql
--- Exemplo: Política para alunos verem suas próprias matrículas
-CREATE POLICY "Students can view own enrollments" 
-ON enrollments 
-FOR SELECT 
-TO authenticated 
+-- Usuários podem ver seu próprio perfil
+CREATE POLICY "Users can view own profile"
+ON public.profiles FOR SELECT TO authenticated
+USING (auth.uid() = id);
+
+-- Admin e funcionário podem ver todos os perfis
+CREATE POLICY "Admin and staff can view all profiles"
+ON public.profiles FOR SELECT TO authenticated
 USING (
-  student_id = (auth.jwt() ->> 'sub')::uuid
-  AND (auth.jwt() ->> 'role') = 'authenticated'
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('admin', 'funcionario')
+  )
 );
+
+-- Estudantes podem ver apenas seus próprios registros
+CREATE POLICY "Students can view own record"
+ON public.students FOR SELECT TO authenticated
+USING (auth.uid() = id);
+```
+
+### Funções Auxiliares de Segurança
+
+```sql
+-- Verificar role do usuário
+CREATE FUNCTION public.check_user_role(required_roles text[])
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = ANY(required_roles)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Verificar se email foi confirmado
+CREATE FUNCTION public.is_email_confirmed()
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM auth.users
+    WHERE id = auth.uid() AND email_confirmed_at IS NOT NULL
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ### Rotação de Chaves
@@ -176,22 +238,49 @@ console.log('[JWKS] Fetching keys from:', jwksUrl);
 2. Confirmar que usuário está autenticado
 3. Verificar Custom Access Token Hook se configurado
 
+### 🚨 NOVOS PROBLEMAS RESOLVIDOS (06/08/2025)
+
+#### Problema: Usuários alunos sem registro na tabela students
+
+**Solução Implementada**:
+- Trigger `handle_new_user()` corrigido para criar ambos os registros
+- Migration de backfill para usuários existentes
+- Sincronização automática entre tabelas
+
+#### Problema: Usuários acessando sem confirmar email
+
+**Solução Implementada**:
+- `ProtectedRoute` atualizado com verificação obrigatória
+- Interface dedicada para aguardar confirmação
+- Bloqueio total até confirmação de email
+
+#### Problema: Admin não conseguia alterar roles de usuários
+
+**Solução Implementada**:
+- Interface `/admin/user-roles` criada
+- Sistema de validação de email confirmado
+- Indicadores visuais de status de confirmação
+
 ## Próximos Passos
 
-### Curto Prazo (1-2 semanas)
+### Curto Prazo (1-2 semanas) - ATUALIZADO
+- [x] **CONCLUÍDO**: Sistema de confirmação de email obrigatória
+- [x] **CONCLUÍDO**: Interface de gerenciamento de roles pelo admin
+- [x] **CONCLUÍDO**: Correção do bug crítico de registros students
 - [ ] Monitorar métricas de performance pós-deploy
-- [ ] Ajustar TTL do cache se necessário
 - [ ] Implementar alertas para falhas de autenticação
 
 ### Médio Prazo (1-2 meses)
 - [ ] Migrar para supabase-js v3 quando disponível (suporte nativo getClaims)
 - [ ] Implementar verificação criptográfica completa de JWT
 - [ ] Adicionar suporte para refresh token rotation
+- [ ] **NOVO**: Implementar sistema de convites para professores/funcionários
 
 ### Longo Prazo (3-6 meses)
 - [ ] Avaliar migração para auth providers externos (se necessário)
 - [ ] Implementar MFA (Multi-Factor Authentication)
 - [ ] Adicionar biometria para app mobile (futuro)
+- [ ] **NOVO**: Dashboard de analytics de autenticação
 
 ## Referências
 
@@ -201,6 +290,18 @@ console.log('[JWKS] Fetching keys from:', jwksUrl);
 - [Supabase Auth Docs](https://supabase.com/docs/guides/auth)
 
 ## Changelog
+
+### 06/08/2025 - Reforma Completa do Sistema de Autenticação
+- **CRÍTICO**: Corrigido bug de usuários alunos sem registro na tabela students
+- **NOVO**: Confirmação de email obrigatória para todos os usuários
+- **NOVO**: Sistema de promoção de roles pelo admin (`/admin/user-roles`)
+- **NOVO**: Interface dedicada para aguardar confirmação de email
+- **NOVO**: Triggers automáticos `handle_new_user()` e `handle_email_confirmation()`
+- **NOVO**: Políticas RLS atualizadas com funções auxiliares de segurança
+- **MELHORIA**: Formulário de cadastro sempre registra como 'aluno'
+- **MELHORIA**: Sistema de indicadores visuais para status de confirmação
+- **MELHORIA**: Validações que impedem alterações sem confirmação de email
+- **MIGRAÇÃO**: Backfill automático para usuários existentes sem registro students
 
 ### 05/08/2025 - Migração Inicial
 - Atualizado cliente Supabase com nova publishable key
@@ -212,4 +313,4 @@ console.log('[JWKS] Fetching keys from:', jwksUrl);
 ---
 
 **Mantido por**: Equipe de Desenvolvimento Vila Dança & Arte  
-**Última atualização**: 05/08/2025
+**Última atualização**: 06/08/2025

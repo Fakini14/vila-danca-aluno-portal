@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, UserCog, Search, Crown, GraduationCap, Briefcase, User } from 'lucide-react';
+import { Loader2, UserCog, Search, Crown, GraduationCap, Briefcase, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface UserProfile {
   id: string;
@@ -18,6 +19,7 @@ interface UserProfile {
   whatsapp: string;
   role: 'admin' | 'professor' | 'funcionario' | 'aluno';
   status: 'ativo' | 'inativo';
+  email_confirmed: boolean;
   created_at: string;
 }
 
@@ -65,7 +67,7 @@ export function UserRoleManager() {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, selectedRole]);
+  }, [users, searchTerm, selectedRole, filterUsers]);
 
   const fetchUsers = async () => {
     try {
@@ -78,10 +80,10 @@ export function UserRoleManager() {
       if (error) throw error;
 
       setUsers(data || []);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Erro ao carregar usuários",
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
         variant: "destructive",
       });
     } finally {
@@ -89,7 +91,7 @@ export function UserRoleManager() {
     }
   };
 
-  const filterUsers = () => {
+  const filterUsers = useCallback(() => {
     let filtered = users;
 
     // Filter by search term
@@ -107,9 +109,19 @@ export function UserRoleManager() {
     }
 
     setFilteredUsers(filtered);
-  };
+  }, [users, searchTerm, selectedRole]);
 
   const handleRoleChange = (user: UserProfile, newRole: string) => {
+    // Prevent role change for unconfirmed users
+    if (!user.email_confirmed) {
+      toast({
+        title: "Email não confirmado",
+        description: "O usuário precisa confirmar o email antes de ter sua função alterada.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setPromotionDialog({
       isOpen: true,
       user,
@@ -135,10 +147,10 @@ export function UserRoleManager() {
 
       // Refresh users list
       await fetchUsers();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Erro ao atualizar função",
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
         variant: "destructive",
       });
     } finally {
@@ -210,46 +222,63 @@ export function UserRoleManager() {
                 Nenhum usuário encontrado
               </div>
             ) : (
-              filteredUsers.map((user) => {
-                const RoleIcon = roleIcons[user.role];
-                return (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <RoleIcon className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">{user.nome_completo}</div>
-                          <div className="text-sm text-muted-foreground">{user.email}</div>
+              <TooltipProvider>
+                {filteredUsers.map((user) => {
+                  const RoleIcon = roleIcons[user.role];
+                  return (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <RoleIcon className="h-4 w-4" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{user.nome_completo}</span>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  {user.email_confirmed ? (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                                  )}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {user.email_confirmed ? 'Email confirmado' : 'Email não confirmado'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <Badge variant={roleColors[user.role]}>
-                        {roleLabels[user.role]}
-                      </Badge>
                       
-                      <Select
-                        value={user.role}
-                        onValueChange={(newRole) => handleRoleChange(user, newRole)}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="aluno">Aluno</SelectItem>
-                          <SelectItem value="professor">Professor</SelectItem>
-                          <SelectItem value="funcionario">Funcionário</SelectItem>
-                          <SelectItem value="admin">Administrador</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-4">
+                        <Badge variant={roleColors[user.role]}>
+                          {roleLabels[user.role]}
+                        </Badge>
+                        
+                        <Select
+                          value={user.role}
+                          onValueChange={(newRole) => handleRoleChange(user, newRole)}
+                          disabled={!user.email_confirmed}
+                        >
+                          <SelectTrigger className="w-40" disabled={!user.email_confirmed}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="aluno">Aluno</SelectItem>
+                            <SelectItem value="professor">Professor</SelectItem>
+                            <SelectItem value="funcionario">Funcionário</SelectItem>
+                            <SelectItem value="admin">Administrador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </TooltipProvider>
             )}
           </div>
         </CardContent>

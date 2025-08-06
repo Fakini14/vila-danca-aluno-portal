@@ -16,7 +16,6 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
-  const [userType, setUserType] = useState<'aluno' | 'professor'>('aluno');
   const [emailNotConfirmed, setEmailNotConfirmed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,7 +80,8 @@ export default function Auth() {
     const endereco_completo = formData.get('endereco_completo') as string;
     const cep = formData.get('cep') as string;
 
-    const additionalData = userType === 'aluno' ? {
+    // All users register as 'aluno' initially
+    const additionalData = {
       nome_completo, 
       cpf, 
       whatsapp,
@@ -90,14 +90,9 @@ export default function Auth() {
       endereco_completo,
       cep,
       role: 'aluno'
-    } : {
-      nome_completo, 
-      cpf, 
-      whatsapp,
-      role: 'professor'
     };
 
-    console.log('Form submission - User Type:', userType, 'Additional Data:', additionalData);
+    console.log('Form submission - Additional Data:', additionalData);
 
     const { error, data } = await signUp(email, password, additionalData);
     
@@ -216,24 +211,11 @@ export default function Auth() {
             <CardHeader>
               <CardTitle>Criar Conta</CardTitle>
               <CardDescription>
-                Preencha seus dados para se cadastrar no sistema. Professores passarão por aprovação administrativa.
+                Preencha seus dados para se cadastrar como aluno no sistema. Após confirmação do email, o administrador poderá alterar seu papel se necessário.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignUp} className="space-y-4">
-                {/* User Type Selection */}
-                <div className="space-y-2">
-                  <Label>Tipo de Usuário</Label>
-                  <Select value={userType} onValueChange={(value: 'aluno' | 'professor') => setUserType(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aluno">Sou Aluno</SelectItem>
-                      <SelectItem value="professor">Sou Professor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-nome">Nome Completo</Label>
                   <Input
@@ -285,54 +267,50 @@ export default function Auth() {
                   />
                 </div>
                 
-                {/* Additional fields for students */}
-                {userType === 'aluno' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-sexo">Sexo</Label>
-                      <Select name="sexo" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o sexo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="masculino">Masculino</SelectItem>
-                          <SelectItem value="feminino">Feminino</SelectItem>
-                          <SelectItem value="outro">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-nascimento">Data de Nascimento (Opcional)</Label>
-                      <Input
-                        id="signup-nascimento"
-                        name="data_nascimento"
-                        type="date"
-                        placeholder="DD/MM/AAAA"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-endereco">Endereço Completo (Opcional)</Label>
-                      <Textarea
-                        id="signup-endereco"
-                        name="endereco_completo"
-                        placeholder="Endereço completo..."
-                        rows={2}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-cep">CEP (Opcional)</Label>
-                      <Input
-                        id="signup-cep"
-                        name="cep"
-                        type="text"
-                        placeholder="00000-000"
-                      />
-                    </div>
-                  </>
-                )}
+                {/* Additional student fields */}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-sexo">Sexo</Label>
+                  <Select name="sexo" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o sexo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-nascimento">Data de Nascimento (Opcional)</Label>
+                  <Input
+                    id="signup-nascimento"
+                    name="data_nascimento"
+                    type="date"
+                    placeholder="DD/MM/AAAA"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-endereco">Endereço Completo (Opcional)</Label>
+                  <Textarea
+                    id="signup-endereco"
+                    name="endereco_completo"
+                    placeholder="Endereço completo..."
+                    rows={2}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-cep">CEP (Opcional)</Label>
+                  <Input
+                    id="signup-cep"
+                    name="cep"
+                    type="text"
+                    placeholder="00000-000"
+                  />
+                </div>
                 
                 <div className="space-y-2">
                   <Button 
