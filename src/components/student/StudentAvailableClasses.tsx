@@ -26,10 +26,8 @@ interface Class {
   professor_principal_id: string | null;
   sala: string | null;
   class_teachers: Array<{
-    staff: {
-      profiles: {
-        nome_completo: string;
-      };
+    profiles: {
+      nome_completo: string;
     };
   }>;
   current_enrollments?: number;
@@ -66,10 +64,8 @@ export function StudentAvailableClasses() {
         .select(`
           *,
           class_teachers(
-            staff(
-              profiles(
-                nome_completo
-              )
+            profiles(
+              nome_completo
             )
           )
         `)
@@ -456,7 +452,7 @@ export function StudentAvailableClasses() {
                   {classItem.class_teachers?.[0] && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>Prof. {classItem.class_teachers[0].staff?.profiles?.nome_completo}</span>
+                      <span>Prof. {classItem.class_teachers[0].profiles?.nome_completo}</span>
                     </div>
                   )}
 

@@ -759,6 +759,105 @@ if (!validation.isValid) {
 
 ---
 
+## **FASE 10.3: CORREÇÃO DE REFERÊNCIAS REMANESCENTES À TABELA STAFF**
+**Status: ✅ CONCLUÍDA (06/08/2025)**
+
+### Checklist de Implementação:
+- **10.3.1** ✅ **Correção StudentAvailableClasses.tsx:**
+  - Problema identificado: referência à tabela `staff` removida na Fase 8.1
+  - Error: `"Could not find a relationship between 'class_teachers' and 'staff' in the schema cache"`
+  - Interface atualizada: `staff: { profiles: {...} }` → `profiles: {...}`
+  - Query corrigida: `class_teachers(staff(profiles(...)))` → `class_teachers(profiles(...))`
+  - Acesso aos dados: `.staff?.profiles?.nome_completo` → `.profiles?.nome_completo`
+- **10.3.2** ✅ **Correção EnrollmentsTab.tsx:**
+  - Mesma correção aplicada no componente admin de gestão de matrículas
+  - Atualização da interface Teacher para usar `profiles` diretamente
+  - Query e acesso aos dados alinhados com nova estrutura
+- **10.3.3** ✅ **Validação do Sistema:**
+  - Verificação de que não há mais referências à tabela `staff` removida
+  - Teste de acesso à tela de turmas pelo portal do estudante
+  - Confirmação de funcionamento normal sem erros 400 Bad Request
+
+### Resumo da Fase 10.3:
+**O que foi implementado:**
+- **Correção completa de referências órfãs** à tabela `staff` removida na consolidação da Fase 8.1
+- **Alinhamento de interfaces TypeScript** com a estrutura atual do banco de dados
+- **Eliminação de erros 400 Bad Request** ao acessar tela de turmas disponíveis
+- **Consistência arquitetural** mantendo as simplificações da consolidação anterior
+
+**O que foi considerado para implementação:**
+- **Rastros de consolidação**: mudanças estruturais podem deixar referências em componentes específicos
+- **Validação incremental**: verificar todas as interfaces que interagiam com dados de professores
+- **Manutenção de funcionalidade**: preservar exatamente o mesmo comportamento visual
+- **Alinhamento arquitetural**: usar a estrutura consolidada `profiles` diretamente
+
+**O que foi aprendido com os erros nesta fase:**
+- **Consolidações deixam rastros**: mesmo após limpeza extensiva, podem existir referências pontuais
+- **Erros silenciosos perigosos**: 400 Bad Request pode não aparecer em todos os cenários de teste
+- **Validação por usuário**: diferentes portais (admin vs student) podem ter referências independentes
+- **Interface vs implementação**: mudanças no banco requerem atualização de interfaces TypeScript
+
+**Quais logs para identificar os erros nesta fase foram inseridos:**
+- Logs de error 400 Bad Request com details sobre relacionamento inexistente
+- Logs de validação de queries corrigidas nos componentes
+- Logs de teste das telas de turmas nos portais student e admin
+- Logs de verificação final de ausência de referências `staff`
+
+**Contexto da Correção:**
+- **Fase 8.1**: Tabela `staff` foi removida e consolidada na tabela `profiles`
+- **Limpeza principal**: Hooks e componentes principais foram corrigidos na época
+- **Referências pontuais**: Alguns componentes específicos mantiveram referências antigas
+- **Descoberta**: Error só apareceu quando estudante tentou acessar tela de turmas
+
+**Arquivos Corrigidos:**
+- `src/components/student/StudentAvailableClasses.tsx`
+- `src/components/admin/students/EnrollmentsTab.tsx`
+
+**Padrão de Correção Aplicado:**
+```typescript
+// ❌ Antes (referência à tabela staff removida)
+interface Class {
+  class_teachers: Array<{
+    staff: {
+      profiles: {
+        nome_completo: string;
+      };
+    };
+  }>;
+}
+
+// Query antiga
+class_teachers(staff(profiles(nome_completo)))
+
+// Acesso antigo  
+teacher.staff?.profiles?.nome_completo
+
+// ✅ Depois (referência direta à profiles)
+interface Class {
+  class_teachers: Array<{
+    profiles: {
+      nome_completo: string;
+    };
+  }>;
+}
+
+// Query corrigida
+class_teachers(profiles(nome_completo))
+
+// Acesso corrigido
+teacher.profiles?.nome_completo
+```
+
+**Benefícios Alcançados:**
+- ✅ **Tela de turmas funcional**: estudantes conseguem acessar turmas disponíveis sem erro
+- ✅ **Consistência arquitetural**: todas as referências usam estrutura consolidada
+- ✅ **Erro 400 eliminado**: requisições bem-sucedidas com nova estrutura
+- ✅ **Código limpo**: zero referências à tabela `staff` removida
+- ✅ **Funcionalidade preservada**: exatamente o mesmo comportamento visual
+- ✅ **Manutenibilidade**: estrutura consolidada facilita futuras modificações
+
+---
+
 ## **FASE 11: SISTEMA DE EVENTOS** 
 **Status: ⏳ AGUARDANDO**
 
@@ -835,7 +934,7 @@ Este roadmap é o **documento central** de todo o projeto. Para informações t�
 
 # 🎯 STATUS GERAL DO PROJETO
 
-## Fases Concluídas: **10.2/11** (93%)
+## Fases Concluídas: **10.3/11** (94%)
 - ✅ **Fase 1**: Configuração Inicial e Setup
 - ✅ **Fase 2**: Sistema de Autenticação  
 - ✅ **Fase 3**: Portal Administrativo (+ Otimizações Performance)
@@ -847,6 +946,7 @@ Este roadmap é o **documento central** de todo o projeto. Para informações t�
 - ✅ **Fase 9**: Reforma Completa do Sistema de Autenticação (06/08/2025)
 - ✅ **Fase 10.1**: Sistema de Garantia de Cliente Asaas em Matrículas (06/08/2025)
 - ✅ **Fase 10.2**: Correção Crítica de Constraint NULL no Campo WhatsApp (06/08/2025)
+- ✅ **Fase 10.3**: Correção de Referências Remanescentes à Tabela Staff (06/08/2025)
 - ⏳ **Fase 11**: Sistema de Eventos (Pendente)
 
 ## Tecnologias Principais

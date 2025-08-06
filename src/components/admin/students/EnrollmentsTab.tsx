@@ -76,10 +76,8 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
               color
             ),
             class_teachers(
-              staff(
-                profiles(
-                  nome_completo
-                )
+              profiles(
+                nome_completo
               )
             )
           )
@@ -121,8 +119,8 @@ export function EnrollmentsTab({ studentId }: EnrollmentsTabProps) {
             color: enrollment.classes?.class_types?.color || '#6366f1',
           },
           teacher: {
-            id: enrollment.classes?.class_teachers?.[0]?.staff?.profiles?.id || '',
-            nome_completo: enrollment.classes?.class_teachers?.[0]?.staff?.profiles?.nome_completo || 'Professor não definido',
+            id: enrollment.classes?.class_teachers?.[0]?.profiles?.id || '',
+            nome_completo: enrollment.classes?.class_teachers?.[0]?.profiles?.nome_completo || 'Professor não definido',
           },
           current_enrollments: enrollmentCountMap[enrollment.classes?.id || ''] || 0,
         }
