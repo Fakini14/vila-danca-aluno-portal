@@ -22,7 +22,7 @@ export function useStudentsOptimized() {
             id,
             ativa,
             data_matricula,
-            classes(nome, modalidade)
+            classes(nome, modalidade, class_types(name))
           )
         `)
         .order('profiles(nome_completo)');
@@ -68,6 +68,7 @@ export function useTeachersOptimized() {
             id,
             nome,
             modalidade,
+            class_types(name),
             ativa
           )
         `)
@@ -98,7 +99,8 @@ export function useClassesOptimized() {
         .from('classes')
         .select(`
           *,
-          profiles!classes_professor_principal_id_fkey(nome_completo),
+          class_types(id, name),
+          profiles!classes_professor_principal_id_fkey(id, nome_completo),
           enrollments!left(id, ativa)
         `)
         .order('modalidade');

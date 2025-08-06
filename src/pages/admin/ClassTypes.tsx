@@ -4,6 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { 
   Palette, 
   Plus, 
@@ -39,6 +50,8 @@ const useClassTypes = () => {
 export default function ClassTypes() {
   const [showForm, setShowForm] = useState(false);
   const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [classTypeToDelete, setClassTypeToDelete] = useState<ClassType | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -71,12 +84,18 @@ export default function ClassTypes() {
     },
   });
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir a modalidade "${name}"? Esta ação não pode ser desfeita.`)) {
-      return;
+  const handleDeleteClick = (classType: ClassType) => {
+    setClassTypeToDelete(classType);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (classTypeToDelete) {
+      console.log('ClassTypes: Deletando modalidade:', { id: classTypeToDelete.id, name: classTypeToDelete.name });
+      deleteMutation.mutate(classTypeToDelete.id);
+      setDeleteDialogOpen(false);
+      setClassTypeToDelete(null);
     }
-    console.log('ClassTypes: Deletando modalidade:', { id, name });
-    deleteMutation.mutate(id);
   };
 
   const handleBack = () => {
@@ -164,7 +183,7 @@ export default function ClassTypes() {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => handleDelete(classType.id, classType.name)}
+                      onClick={() => handleDeleteClick(classType)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -212,6 +231,30 @@ export default function ClassTypes() {
           console.log('ClassTypes: Modal fechado e estado limpo');
         }}
       />
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a modalidade "{classTypeToDelete?.name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -116,6 +116,7 @@ export type Database = {
       classes: {
         Row: {
           ativa: boolean
+          class_type_id: string | null
           created_at: string
           data_inicio: string
           data_termino: string | null
@@ -136,6 +137,7 @@ export type Database = {
         }
         Insert: {
           ativa?: boolean
+          class_type_id?: string | null
           created_at?: string
           data_inicio: string
           data_termino?: string | null
@@ -156,6 +158,7 @@ export type Database = {
         }
         Update: {
           ativa?: boolean
+          class_type_id?: string | null
           created_at?: string
           data_inicio?: string
           data_termino?: string | null
@@ -175,6 +178,13 @@ export type Database = {
           valor_matricula?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "classes_class_type_id_fkey"
+            columns: ["class_type_id"]
+            isOneToOne: false
+            referencedRelation: "class_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "classes_professor_principal_id_fkey"
             columns: ["professor_principal_id"]
@@ -533,6 +543,13 @@ export type Database = {
       ensure_student_record: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_revenue_by_modality: {
+        Args: { start_date: string; end_date: string }
+        Returns: {
+          modalidade: string
+          total_amount: number
+        }[]
       }
       get_user_role: {
         Args: { user_id: string }

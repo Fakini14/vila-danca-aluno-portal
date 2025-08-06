@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ const diasSemana = [
 
 export default function Classes() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [modalityFilter, setModalityFilter] = useState('all');
   const [teacherFilter, setTeacherFilter] = useState('all');
@@ -138,7 +140,8 @@ export default function Classes() {
         description: "Turma removida com sucesso",
       });
       
-      // TODO: Refresh data here - could use React Query invalidation
+      // Invalidate cache to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['classes', 'optimized'] });
     } catch (error: any) {
       toast({
         title: "Erro ao excluir turma",

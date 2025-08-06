@@ -59,8 +59,6 @@ type FormData = z.infer<typeof formSchema>;
 interface ClassType {
   id: string;
   name: string;
-  color: string;
-  active: boolean;
 }
 
 interface Teacher {
@@ -72,12 +70,11 @@ interface Teacher {
 
 const useClassTypes = () => {
   return useQuery({
-    queryKey: ['class-types-active'],
+    queryKey: ['class-types'],
     queryFn: async (): Promise<ClassType[]> => {
       const { data, error } = await supabase
         .from('class_types')
-        .select('*')
-        .eq('active', true)
+        .select('id, name')
         .order('name');
 
       if (error) throw error;
@@ -237,23 +234,50 @@ export default function NewClass() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Nome da turma */}
-              <FormField
-                control={form.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome da Turma (opcional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Ballet Infantil A" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Se não informado, será gerado automaticamente baseado na modalidade e nível
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Nome da turma e Professor */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="nome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Turma (opcional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Ballet Infantil A" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Se não informado, será gerado automaticamente baseado na modalidade e nível
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="professor_principal_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Professor Principal</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um professor (opcional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {teachers?.map((teacher) => (
+                            <SelectItem key={teacher.id} value={teacher.id}>
+                              {teacher.profiles.nome_completo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Modalidade e Nível */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -272,13 +296,7 @@ export default function NewClass() {
                         <SelectContent>
                           {classTypes?.map((type) => (
                             <SelectItem key={type.id} value={type.name}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: type.color }}
-                                />
-                                {type.name}
-                              </div>
+                              {type.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -311,32 +329,6 @@ export default function NewClass() {
                   )}
                 />
               </div>
-
-              {/* Professor */}
-              <FormField
-                control={form.control}
-                name="professor_principal_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Professor Principal</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um professor (opcional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {teachers?.map((teacher) => (
-                          <SelectItem key={teacher.id} value={teacher.id}>
-                            {teacher.profiles.nome_completo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               {/* Dias da semana */}
               <FormField
