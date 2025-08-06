@@ -12,16 +12,15 @@ interface StudentData {
   id: string;
   nome_completo: string;
   email: string;
-  role: string;
-  sexo: string;
-  data_nascimento: string;
-  endereco_completo: string;
-  cep: string;
-  whatsapp: string;
+  sexo?: string;
+  data_nascimento?: string;
+  endereco_completo?: string;
+  cep?: string;
+  whatsapp?: string;
   auth_status: 'pending' | 'active';
   created_at: string;
   updated_at: string;
-  // Campos calculados pela view materializada
+  // Campos calculados
   active_enrollments: number;
   total_enrollments: number;
 }

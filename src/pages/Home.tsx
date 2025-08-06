@@ -22,6 +22,11 @@ export default function Home() {
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const handleLoginRedirect = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
   useEffect(() => {
     const fetchActiveClasses = async () => {
       try {
@@ -104,11 +109,9 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button asChild className="dance-gradient hover:scale-105 transition-transform">
-                <Link to="/auth">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Login
-                </Link>
+              <Button onClick={handleLoginRedirect} className="dance-gradient hover:scale-105 transition-transform">
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
               </Button>
             </div>
           </div>
@@ -135,11 +138,9 @@ export default function Home() {
               Descubra a magia do movimento em um ambiente acolhedor e profissional!
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Button size="lg" asChild className="dance-gradient hover:scale-105 transition-all duration-300 text-lg px-10 py-7 dance-shadow rounded-xl">
-                <Link to="/auth">
-                  <LogIn className="h-5 w-5 mr-3" />
-                  Acessar Portal
-                </Link>
+              <Button size="lg" onClick={handleLoginRedirect} className="dance-gradient hover:scale-105 transition-all duration-300 text-lg px-10 py-7 dance-shadow rounded-xl">
+                <LogIn className="h-5 w-5 mr-3" />
+                Acessar Portal
               </Button>
               <Button variant="outline" size="lg" asChild className="text-lg px-10 py-7 hover:bg-primary/10 transition-all duration-300 rounded-xl border-2">
                 <Link to="#turmas">

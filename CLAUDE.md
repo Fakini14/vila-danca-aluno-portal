@@ -75,7 +75,6 @@ This is a React-based dance school student portal built with modern web technolo
 The Supabase database includes these main entities:
 - `profiles` - User base information (linked to Supabase auth)
 - `students` - Student-specific data with auth_status tracking
-- `staff` - Staff members (teachers, admin, etc.)
 - `class_types` - Dance modalities (Ballet, Jazz, etc.) with colors
 - `classes` - Dance classes with schedules, pricing, and teacher assignments
 - `enrollments` - Student enrollments in classes with status tracking
@@ -88,7 +87,7 @@ The Supabase database includes these main entities:
 - `aluno` (student) - Access to student portal
 - `admin` - Full administrative access
 - `professor` (teacher) - Class management
-- `funcionario` (staff) - Limited admin functions
+- `funcionario` - Administrative functions
 
 ### Application Structure
 

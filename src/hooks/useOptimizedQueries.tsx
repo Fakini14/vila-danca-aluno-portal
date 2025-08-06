@@ -11,13 +11,6 @@ export function useStudentsOptimized() {
         .from('students')
         .select(`
           *,
-          profiles!inner(
-            nome_completo,
-            email,
-            cpf,
-            whatsapp,
-            telefone
-          ),
           enrollments!left(
             id,
             ativa,
@@ -25,18 +18,14 @@ export function useStudentsOptimized() {
             classes(nome, modalidade, class_types(name))
           )
         `)
-        .order('profiles(nome_completo)');
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Calcular estatísticas de matrícula para cada aluno
       return data.map(student => ({
         ...student,
-        nome_completo: student.profiles?.nome_completo || '',
-        email: student.profiles?.email || '',
-        cpf: student.profiles?.cpf || '',
-        whatsapp: student.profiles?.whatsapp || '',
-        telefone: student.profiles?.telefone || '',
+        nome_completo: student.email || '', // Usar email como nome temporário
         active_enrollments: student.enrollments?.filter(e => e.ativa).length || 0,
         total_enrollments: student.enrollments?.length || 0
       }));
