@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
 import Auth from "./pages/Auth";
 import Confirm from "./pages/auth/Confirm";
 import ResetPassword from "./pages/ResetPassword";
@@ -65,6 +66,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/confirm" element={<Confirm />} />
             <Route path="/reset-password" element={<ResetPassword />} />

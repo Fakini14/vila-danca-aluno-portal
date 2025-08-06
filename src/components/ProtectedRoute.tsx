@@ -23,9 +23,9 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
     );
   }
   
-  // Se não há usuário autenticado, redirecionar para auth
+  // Se não há usuário autenticado, redirecionar para login
   if (!user || !profile) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   // Check email confirmation - required for all users
@@ -76,7 +76,7 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
               </Button>
               
               <Button
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => window.location.href = '/login'}
                 variant="ghost"
                 className="w-full"
               >

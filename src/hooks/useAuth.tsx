@@ -90,24 +90,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isFetching = React.useRef<boolean>(false);
   const CACHE_DURATION = 30000; // 30 seconds cache
   
-  // DEBUG: Log cache stats periodically (disabled in production)
+  // DEBUG: Enhanced monitoring for auth state and infinite loading prevention
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Auth State Monitor Started');
+      
       const interval = setInterval(() => {
-        if (profile) {
-          const cacheAge = Date.now() - lastFetchTime.current;
-          console.log('📊 Auth Cache Stats:', {
-            hasProfile: !!profile,
-            profileId: profile.id?.substring(0, 8),
-            cacheAge: Math.round(cacheAge / 1000) + 's',
-            isFetching: isFetching.current
-          });
+        console.log('📊 Auth State:', {
+          loading,
+          hasUser: !!user,
+          hasSession: !!session,
+          hasProfile: !!profile,
+          profileId: profile?.id?.substring(0, 8),
+          profileRole: profile?.role,
+          isFetching: isFetching.current,
+          cacheAge: profile ? Math.round((Date.now() - lastFetchTime.current) / 1000) + 's' : 'N/A'
+        });
+        
+        // INFINITE LOADING DETECTION: If loading is true for more than 20 seconds, log warning
+        if (loading) {
+          const loadingTime = Date.now() - (window as any).__authLoadingStart || 0;
+          if (loadingTime > 20000) {
+            console.warn('⚠️ POTENTIAL INFINITE LOADING DETECTED!', {
+              loadingTimeSeconds: Math.round(loadingTime / 1000),
+              hasUser: !!user,
+              hasSession: !!session,
+              hasProfile: !!profile,
+              isFetching: isFetching.current
+            });
+            
+            // EMERGENCY RECOVERY: Force loading to false after 25 seconds
+            if (loadingTime > 25000) {
+              console.error('🚨 EMERGENCY RECOVERY: Forcing loading to false after 25 seconds');
+              setLoading(false);
+              delete (window as any).__authLoadingStart;
+            }
+          }
         }
-      }, 60000); // Log every minute
+      }, 5000); // Log every 5 seconds for better monitoring
       
       return () => clearInterval(interval);
     }
-  }, [profile]);
+  }, [loading, user, session, profile]);
+  
+  // Track loading start time for infinite loading detection
+  React.useEffect(() => {
+    if (loading && !((window as any).__authLoadingStart)) {
+      (window as any).__authLoadingStart = Date.now();
+      console.log('🚀 Auth loading started at:', new Date().toISOString());
+    } else if (!loading && (window as any).__authLoadingStart) {
+      const loadingDuration = Date.now() - (window as any).__authLoadingStart;
+      console.log('✅ Auth loading completed in:', Math.round(loadingDuration / 1000) + 's');
+      delete (window as any).__authLoadingStart;
+    }
+  }, [loading]);
 
   useEffect(() => {
     let mounted = true;
@@ -592,7 +628,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       
       // Redirecionar para a página de login após logout
-      window.location.href = '/auth';
+      window.location.href = '/login';
       
       toast({
         title: "Logout realizado",

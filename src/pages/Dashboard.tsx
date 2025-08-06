@@ -8,14 +8,22 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando autenticação...</p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Debug: Dashboard loading - check console for auth details
+            </p>
+          )}
+        </div>
       </div>
     );
   }
 
-  // Se não há usuário autenticado, redirecionar para auth
+  // Se não há usuário autenticado, redirecionar para login
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Se o usuário está autenticado mas não tem profile, mostrar loading

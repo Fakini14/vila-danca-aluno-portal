@@ -51,7 +51,7 @@ export default function ResetPassword() {
 
   // Redirect if not authenticated and not a valid reset flow
   if (!loading && !user && !isValidResetFlow) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (loading) {
