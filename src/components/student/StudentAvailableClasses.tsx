@@ -24,7 +24,6 @@ interface Class {
   valor_matricula: number | null;
   ativa: boolean;
   professor_principal_id: string | null;
-  sala: string | null;
   professor?: {
     nome_completo: string;
   } | null;
@@ -149,20 +148,6 @@ export function StudentAvailableClasses() {
     return time.slice(0, 5);
   };
 
-  const getModalityColor = (modalidade: string) => {
-    const colors: Record<string, string> = {
-      'Ballet': '#f472b6',
-      'Jazz': '#fbbf24',
-      'Hip Hop': '#8b5cf6',
-      'Dança Contemporânea': '#06b6d4',
-      'Dança de Salão': '#ef4444',
-      'Sapateado': '#10b981',
-      'Teatro Musical': '#f59e0b',
-      'Acrobático': '#6366f1',
-      'default': '#6b7280'
-    };
-    return colors[modalidade] || colors.default;
-  };
 
   // Função para pré-validar dados do estudante
   const handlePreValidation = async (classItem: Class) => {
@@ -401,13 +386,7 @@ export function StudentAvailableClasses() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getModalityColor(classItem.modalidade) }}
-                      />
-                      <CardTitle className="text-lg">{classItem.nome || classItem.modalidade}</CardTitle>
-                    </div>
+                    <CardTitle className="text-lg mb-2">{classItem.nome || classItem.modalidade}</CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{classItem.modalidade}</Badge>
                       <Badge variant="outline">{classItem.nivel}</Badge>
@@ -444,12 +423,6 @@ export function StudentAvailableClasses() {
                     </div>
                   )}
 
-                  {classItem.sala && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>Sala: {classItem.sala}</span>
-                    </div>
-                  )}
                 </div>
 
                 <div className="border-t pt-4">

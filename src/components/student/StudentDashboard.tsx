@@ -24,7 +24,6 @@ interface DashboardData {
   upcomingClasses: ClassSchedule[];
   paymentStatus: PaymentSummary;
   announcements: Announcement[];
-  availableClasses: AvailableClass[];
   enrolledClasses: EnrolledClass[];
   activeSubscriptions: number;
   nextSubscriptionDue: string | null;
@@ -52,17 +51,6 @@ interface Announcement {
   content: string;
   priority: string;
   created_at: string;
-}
-
-interface AvailableClass {
-  id: string;
-  modalidade: string;
-  nivel: string;
-  tipo: string;
-  dias_semana: string[];
-  horario_inicio: string;
-  horario_fim: string;
-  valor_aula: number;
 }
 
 interface EnrolledClass {
@@ -138,25 +126,6 @@ export function StudentDashboard() {
         // Continue execution - announcements are not critical for dashboard loading
       }
 
-      // Fetch available classes (not enrolled)
-      const enrolledClassIds = enrolledClasses?.map(e => e.class?.id).filter(Boolean) || [];
-      
-      let availableClassesQuery = supabase
-        .from('classes')
-        .select('id, modalidade, nivel, tipo, dias_semana, horario_inicio, horario_fim, valor_aula')
-        .eq('ativa', true);
-      
-      // Only add the exclusion filter if there are enrolled classes
-      if (enrolledClassIds.length > 0) {
-        availableClassesQuery = availableClassesQuery.not('id', 'in', `(${enrolledClassIds.join(',')})`);
-      }
-      
-      const { data: availableClasses, error: availableClassesError } = await availableClassesQuery;
-
-      if (availableClassesError) {
-        console.error('Error fetching available classes:', availableClassesError);
-        // Continue execution - available classes are not critical for dashboard loading
-      }
 
       // Fetch active subscriptions
       const { data: subscriptions, error: subscriptionsError } = await supabase
@@ -193,7 +162,6 @@ export function StudentDashboard() {
         upcomingClasses,
         paymentStatus: paymentSummary,
         announcements: announcements || [],
-        availableClasses: availableClasses || [],
         enrolledClasses: processedEnrolledClasses,
         activeSubscriptions,
         nextSubscriptionDue
@@ -455,49 +423,6 @@ export function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Available Classes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Heart className="mr-2 h-5 w-5" />
-            Outras Aulas Disponíveis
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {dashboardData.availableClasses.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Não há outras aulas disponíveis no momento.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {dashboardData.availableClasses.map((classItem) => (
-                <div key={classItem.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold">{classItem.modalidade}</h3>
-                    <p className="font-semibold text-primary">
-                      R$ {classItem.valor_aula.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 mb-2">
-                    <Badge variant="secondary">{classItem.nivel}</Badge>
-                    <Badge variant="outline">{classItem.tipo}</Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center mb-1">
-                      <Calendar className="mr-1 h-3 w-3" />
-                      {classItem.dias_semana.map(dia => formatDayOfWeek(dia)).join(', ')}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="mr-1 h-3 w-3" />
-                      {classItem.horario_inicio} - {classItem.horario_fim}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Enrolled Classes */}
       <Card>
