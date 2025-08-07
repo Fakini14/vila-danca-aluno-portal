@@ -90,6 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isFetching = React.useRef<boolean>(false);
   const CACHE_DURATION = 30000; // 30 seconds cache
   
+  // ASAAS CUSTOMER CACHE: Prevent multiple attempts to create same customer
+  const asaasCustomerCreationAttempts = React.useRef<Set<string>>(new Set());
+  const asaasCustomerCreating = React.useRef<Set<string>>(new Set());
+  
   // DEBUG: Enhanced monitoring for auth state and infinite loading prevention
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -230,6 +234,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [toast]);
 
+  // ASAAS CUSTOMER: Ensure Asaas customer exists for student users
+  const ensureAsaasCustomer = async (userId: string) => {
+    console.log('🏪 ensureAsaasCustomer started for userId:', userId);
+    
+    // Skip if already attempting or attempted
+    if (asaasCustomerCreating.current.has(userId) || asaasCustomerCreationAttempts.current.has(userId)) {
+      console.log('⏭️ Skipping Asaas customer creation - already attempted or in progress');
+      return;
+    }
+    
+    try {
+      asaasCustomerCreating.current.add(userId);
+      
+      // First check if student already has asaas_customer_id
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('asaas_customer_id')
+        .eq('id', userId)
+        .single();
+      
+      if (studentError) {
+        console.error('❌ Error checking student Asaas customer ID:', studentError);
+        return;
+      }
+      
+      if (studentData?.asaas_customer_id) {
+        console.log('✅ Student already has Asaas customer:', studentData.asaas_customer_id);
+        asaasCustomerCreationAttempts.current.add(userId);
+        return;
+      }
+      
+      console.log('🔄 Creating Asaas customer for student:', userId);
+      
+      // Call the edge function to create Asaas customer
+      const { data: customerResult, error: customerError } = await supabase.functions.invoke(
+        'create-asaas-customer',
+        {
+          body: { student_id: userId }
+        }
+      );
+      
+      if (customerError) {
+        console.error('❌ Error calling create-asaas-customer function:', customerError);
+        toast({
+          title: "Aviso",
+          description: "Não foi possível configurar sua conta de pagamentos. Você pode tentar fazer login novamente mais tarde.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (customerResult?.success) {
+        console.log('✅ Asaas customer created successfully:', customerResult.asaas_customer_id);
+        toast({
+          title: "Conta configurada",
+          description: "Sua conta de pagamentos foi configurada com sucesso!",
+        });
+        asaasCustomerCreationAttempts.current.add(userId);
+      } else {
+        console.error('❌ Asaas customer creation failed:', customerResult);
+        toast({
+          title: "Aviso",
+          description: "Houve um problema ao configurar sua conta de pagamentos. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Unexpected error in ensureAsaasCustomer:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao configurar conta de pagamentos.",
+        variant: "destructive",
+      });
+    } finally {
+      asaasCustomerCreating.current.delete(userId);
+    }
+  };
+
   // OPTIMIZED: Smart caching to prevent unnecessary refetches
   const fetchUserProfile = async (userId: string, forceRefresh = false) => {
     console.log('🔄 fetchUserProfile started for userId:', userId, { forceRefresh });
@@ -294,6 +377,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastFetchTime.current = now;
       lastFetchedUserId.current = userId;
       setLoading(false);
+      
+      // ASAAS INTEGRATION: Ensure Asaas customer exists for student users
+      if (data?.role === 'aluno') {
+        console.log('👨‍🎓 User is a student - ensuring Asaas customer exists');
+        // Call ensureAsaasCustomer without awaiting to avoid blocking the UI
+        ensureAsaasCustomer(userId).catch(error => {
+          console.error('❌ Error ensuring Asaas customer:', error);
+        });
+      }
       
     } catch (error) {
       console.error('❌ Error or timeout in fetchUserProfile:', error);

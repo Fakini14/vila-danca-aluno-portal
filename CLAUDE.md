@@ -11,7 +11,7 @@ This is a comprehensive dance school management system with separate portals for
 ### Current Development Status
 The project is in active development with the following modules already implemented:
 - **Complete Authentication System** (Supabase Auth with self-service registration)
-- **Complete Database Schema** with user roles, permissions, and auth_status tracking
+- **Complete Database Schema** with user roles, permissions, and auth_status tracking  
 - **Complete Teacher Portal System** (All 6 pages: Dashboard, Classes, Students, Schedule, Commissions, Reports)
 - **Complete Admin Class Types Management** (Full CRUD with colors, filtering, status toggle)
 - **Complete Admin Classes Management** (List view, filtering, modal form, dedicated new page)
@@ -21,6 +21,7 @@ The project is in active development with the following modules already implemen
 - **Student Self-Enrollment System** (Complete RLS policies for student-initiated enrollments)
 - **E-commerce Checkout System** (Full Asaas integration with PIX, Boleto, Credit Card)
 - **Payment Webhook Automation** (Automatic enrollment activation after payment confirmation)
+- **Email Confirmation System** (Auth confirmation with redirect handling)
 
 ### Key Business Logic
 - **Multi-role system**: Admin, Teacher (Professor), Student (Aluno)
@@ -102,7 +103,7 @@ The Supabase database includes these main entities:
 - **Checkout Routes**: `/checkout/:paymentId`, `/checkout/success`, `/checkout/failure`
 - **Admin Routes**: `/admin/*` - Protected for `admin` and `funcionario` roles
 - **Teacher Routes**: `/teacher/*` - Protected for `professor` role
-- **Student Routes**: Not yet implemented (planned for Phase 3)
+- **Student Routes**: `/student/*` - Protected for `aluno` role (basic portal implemented)
 
 #### Main Components
 - `src/pages/Dashboard.tsx` - Main entry point, renders different dashboards based on user role

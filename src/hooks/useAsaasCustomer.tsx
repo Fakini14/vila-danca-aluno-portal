@@ -24,7 +24,6 @@ interface StudentData {
     email: string;
     cpf: string;
     whatsapp?: string;
-    telefone?: string;
   };
   endereco_completo?: string;
   cep?: string;
@@ -99,8 +98,7 @@ export function useAsaasCustomer(): UseAsaasCustomerReturn {
               nome_completo,
               email,
               cpf,
-              whatsapp,
-              telefone
+              whatsapp
             )
           `)
           .eq('id', studentId)

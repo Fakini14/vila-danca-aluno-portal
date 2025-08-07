@@ -17,7 +17,6 @@ export interface StudentValidationData {
     email: string;
     cpf: string;
     whatsapp?: string;
-    telefone?: string;
   };
   endereco_completo?: string;
   cep?: string;
@@ -142,7 +141,6 @@ export function validateStudentForAsaas(student: StudentValidationData): Validat
           email: sanitizeEmail(student.profiles.email),
           cpf: sanitizeCPF(student.profiles.cpf),
           whatsapp: sanitizePhone(phone),
-          telefone: sanitizePhone(phone),
         },
         endereco_completo: student.endereco_completo?.trim(),
         cep: student.cep ? sanitizeCEP(student.cep) : undefined,
@@ -330,7 +328,6 @@ function sanitizeCEP(cep: string): string {
 // Utilitários
 function getPreferredPhone(student: StudentValidationData): string {
   return student.profiles?.whatsapp || 
-         student.profiles?.telefone || 
          student.whatsapp || 
          '';
 }

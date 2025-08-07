@@ -278,7 +278,7 @@ export function StudentAvailableClasses() {
             name: profile.nome_completo,
             email: profile.email,
             cpfCnpj: profile.cpf,
-            phone: profile.whatsapp || profile.telefone
+            phone: profile.whatsapp
           },
           value: monthlyValue,
           class_name: classItem.nome || classItem.modalidade,

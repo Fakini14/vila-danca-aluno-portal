@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { InputCPF, InputWhatsApp, InputCEP } from '@/components/ui/masked-inputs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -113,6 +114,14 @@ export default function Auth() {
     };
 
     console.log('Form submission - Additional Data:', additionalData);
+    console.log('Masked fields verification:', {
+      cpf_clean: cpf,
+      whatsapp_clean: whatsapp, 
+      cep_clean: cep,
+      cpf_length: cpf?.length,
+      whatsapp_length: whatsapp?.length,
+      cep_length: cep?.length
+    });
 
     const { error, data } = await signUp(email, password, additionalData);
     
@@ -359,10 +368,9 @@ export default function Auth() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="signup-cpf">CPF</Label>
-                          <Input
+                          <InputCPF
                             id="signup-cpf"
                             name="cpf"
-                            type="text"
                             required
                             placeholder="000.000.000-00"
                             autoComplete="off"
@@ -370,10 +378,9 @@ export default function Auth() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="signup-whatsapp">WhatsApp (Opcional)</Label>
-                          <Input
+                          <InputWhatsApp
                             id="signup-whatsapp"
                             name="whatsapp"
-                            type="tel"
                             placeholder="(00) 00000-0000"
                             autoComplete="tel"
                           />
@@ -440,10 +447,9 @@ export default function Auth() {
                         
                         <div className="space-y-2">
                           <Label htmlFor="signup-cep">CEP (Opcional)</Label>
-                          <Input
+                          <InputCEP
                             id="signup-cep"
                             name="cep"
-                            type="text"
                             placeholder="00000-000"
                             autoComplete="postal-code"
                           />

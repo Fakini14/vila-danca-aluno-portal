@@ -49,24 +49,6 @@ export default function Confirm() {
               emailConfirmed: data.session.user.email_confirmed_at
             });
 
-            // Create Asaas customer for the newly confirmed student
-            try {
-              console.log('Creating Asaas customer for student:', data.session.user.id);
-              const { data: customerResult, error: customerError } = await supabase.functions.invoke('create-asaas-customer', {
-                body: { student_id: data.session.user.id }
-              });
-
-              if (customerError) {
-                console.error('Warning: Failed to create Asaas customer:', customerError);
-                // Don't fail the confirmation process, just log the warning
-              } else if (customerResult?.success) {
-                console.log('Asaas customer created successfully:', customerResult.asaas_customer_id);
-              }
-            } catch (customerError) {
-              console.error('Warning: Error creating Asaas customer:', customerError);
-              // Don't fail the confirmation process, just log the warning
-            }
-
             setStatus('success');
             
             toast({
@@ -125,24 +107,6 @@ export default function Confirm() {
         // Se há sessão e o email foi confirmado, sucesso!
         if ((session?.user?.email_confirmed_at) || emailConfirmed) {
           console.log('Email confirmed successfully through automatic processing!');
-          
-          // Create Asaas customer for the newly confirmed student
-          try {
-            console.log('Creating Asaas customer for student:', session.user.id);
-            const { data: customerResult, error: customerError } = await supabase.functions.invoke('create-asaas-customer', {
-              body: { student_id: session.user.id }
-            });
-
-            if (customerError) {
-              console.error('Warning: Failed to create Asaas customer:', customerError);
-              // Don't fail the confirmation process, just log the warning
-            } else if (customerResult?.success) {
-              console.log('Asaas customer created successfully:', customerResult.asaas_customer_id);
-            }
-          } catch (customerError) {
-            console.error('Warning: Error creating Asaas customer:', customerError);
-            // Don't fail the confirmation process, just log the warning
-          }
           
           setStatus('success');
           
