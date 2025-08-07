@@ -1,4 +1,5 @@
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,22 +16,7 @@ import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import NotFound from "./pages/NotFound";
 
-// Admin Layout and Pages
-import AdminLayout from "./layouts/AdminLayout";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminStudents from "./pages/admin/Students";
-import AdminStudentDetail from "./pages/admin/StudentDetail";
-import AdminTeachers from "./pages/admin/Teachers";
-import AdminClasses from "./pages/admin/Classes";
-import AdminNewClass from "./pages/admin/NewClass";
-import AdminClassTypes from "./pages/admin/ClassTypes";
-import AdminFinance from "./pages/admin/Finance";
-import AdminEvents from "./pages/admin/Events";
-import AdminReports from "./pages/admin/Reports";
-import AdminSettings from "./pages/admin/Settings";
-import AdminUserRoles from "./pages/admin/UserRoles";
-
-// Checkout Pages
+// Checkout Pages (loaded immediately for payment flow)
 import { CheckoutPage } from "./components/checkout/CheckoutPage";
 import { CheckoutSuccess } from "./components/checkout/CheckoutSuccess";
 import { CheckoutFailure } from "./components/checkout/CheckoutFailure";
@@ -38,17 +24,32 @@ import CheckoutSuccessNew from "./pages/checkout/CheckoutSuccess";
 import CheckoutCancel from "./pages/checkout/CheckoutCancel";
 import CheckoutExpired from "./pages/checkout/CheckoutExpired";
 
-// Teacher Layout and Pages
-import TeacherLayout from "./layouts/TeacherLayout";
-import TeacherDashboard from "./pages/teacher/Dashboard";
-import TeacherClasses from "./pages/teacher/Classes";
-import TeacherStudents from "./pages/teacher/Students";
+// Admin Layout and Pages - Lazy loaded
+const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminStudents = lazy(() => import("./pages/admin/Students"));
+const AdminStudentDetail = lazy(() => import("./pages/admin/StudentDetail"));
+const AdminTeachers = lazy(() => import("./pages/admin/Teachers"));
+const AdminClasses = lazy(() => import("./pages/admin/Classes"));
+const AdminNewClass = lazy(() => import("./pages/admin/NewClass"));
+const AdminClassTypes = lazy(() => import("./pages/admin/ClassTypes"));
+const AdminFinance = lazy(() => import("./pages/admin/Finance"));
+const AdminEvents = lazy(() => import("./pages/admin/Events"));
+const AdminReports = lazy(() => import("./pages/admin/Reports"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminUserRoles = lazy(() => import("./pages/admin/UserRoles"));
 
-// Student Layout and Pages
-import StudentLayout from "./layouts/StudentLayout";
-import StudentDashboardPage from "./pages/student/Dashboard";
-import StudentClassesPage from "./pages/student/Classes";
-import StudentPaymentsPage from "./pages/student/Payments";
+// Teacher Layout and Pages - Lazy loaded
+const TeacherLayout = lazy(() => import("./layouts/TeacherLayout"));
+const TeacherDashboard = lazy(() => import("./pages/teacher/Dashboard"));
+const TeacherClasses = lazy(() => import("./pages/teacher/Classes"));
+const TeacherStudents = lazy(() => import("./pages/teacher/Students"));
+
+// Student Layout and Pages - Lazy loaded
+const StudentLayout = lazy(() => import("./layouts/StudentLayout"));
+const StudentDashboardPage = lazy(() => import("./pages/student/Dashboard"));
+const StudentClassesPage = lazy(() => import("./pages/student/Classes"));
+const StudentPaymentsPage = lazy(() => import("./pages/student/Payments"));
 
 // Protected Route Component
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -84,7 +85,9 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin', 'funcionario']}>
                 <ErrorBoundary>
-                  <AdminLayout />
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">Carregando...</div>}>
+                    <AdminLayout />
+                  </Suspense>
                 </ErrorBoundary>
               </ProtectedRoute>
             }>
@@ -106,7 +109,9 @@ const App = () => (
             {/* Teacher Routes */}
             <Route path="/teacher" element={
               <ProtectedRoute allowedRoles={['professor']}>
-                <TeacherLayout />
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">Carregando...</div>}>
+                  <TeacherLayout />
+                </Suspense>
               </ProtectedRoute>
             }>
               <Route index element={<Navigate to="/teacher/dashboard" replace />} />
@@ -119,7 +124,9 @@ const App = () => (
             <Route path="/student" element={
               <ProtectedRoute allowedRoles={['aluno']}>
                 <ErrorBoundary>
-                  <StudentLayout />
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">Carregando...</div>}>
+                    <StudentLayout />
+                  </Suspense>
                 </ErrorBoundary>
               </ProtectedRoute>
             }>

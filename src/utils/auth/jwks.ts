@@ -38,12 +38,12 @@ class JWKSCache {
     
     // Retorna do cache se ainda válido
     if (cached && cached.timestamp + this.ttl > Date.now()) {
-      console.log('[JWKS] Returning cached keys');
+      // Using cached keys
       return cached.jwks;
     }
     
     try {
-      console.log('[JWKS] Fetching keys from:', jwksUrl);
+      // Fetching keys from JWKS endpoint
       const response = await fetch(jwksUrl);
       
       if (!response.ok) {
@@ -63,14 +63,14 @@ class JWKSCache {
         timestamp: Date.now()
       });
       
-      console.log(`[JWKS] Successfully cached ${jwks.keys.length} keys`);
+      // Successfully cached keys
       return jwks;
     } catch (error) {
-      console.error('[JWKS] Error fetching keys:', error);
+      // Error fetching keys - will use fallback if available
       
       // Se houver cache expirado, usar como fallback
       if (cached) {
-        console.warn('[JWKS] Using expired cache as fallback');
+        // Using expired cache as fallback
         return cached.jwks;
       }
       
@@ -90,7 +90,7 @@ class JWKSCache {
    * Limpa o cache (útil para forçar atualização)
    */
   clearCache() {
-    console.log('[JWKS] Cache cleared');
+    // Cache cleared
     this.cache.clear();
   }
   
@@ -109,7 +109,7 @@ class JWKSCache {
     }
     
     if (pruned > 0) {
-      console.log(`[JWKS] Pruned ${pruned} expired entries`);
+      // Pruned expired cache entries
     }
   }
 }
@@ -150,7 +150,7 @@ export function decodeJWTHeader(token: string): Record<string, unknown> | null {
     
     return header;
   } catch (error) {
-    console.error('Error decoding JWT header:', error);
+    // Error decoding JWT header
     return null;
   }
 }
