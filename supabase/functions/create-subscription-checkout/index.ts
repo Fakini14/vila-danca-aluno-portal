@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE',
+  'Access-Control-Max-Age': '86400',
 }
 
 interface CreateCheckoutRequest {
@@ -23,12 +25,22 @@ interface CreateCheckoutRequest {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    console.log('🔧 CORS preflight request received')
+    console.log('🔧 Request headers:', Object.fromEntries(req.headers.entries()))
+    console.log('🔧 Responding with CORS headers:', corsHeaders)
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    })
   }
 
   try {
-    console.log('Request received for create-subscription-checkout')
+    console.log('🚀 POST Request received for create-subscription-checkout')
+    console.log('🌐 Request method:', req.method)
+    console.log('🌐 Request URL:', req.url)
+    console.log('🌐 Request headers:', Object.fromEntries(req.headers.entries()))
     
     // Add timeout to all async operations
     const timeout = (ms: number) => new Promise((_, reject) => 
