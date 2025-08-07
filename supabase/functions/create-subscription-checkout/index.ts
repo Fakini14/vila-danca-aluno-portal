@@ -30,45 +30,110 @@ serve(async (req) => {
   try {
     console.log('Request received for create-subscription-checkout')
     
-    const data: CreateCheckoutRequest = await req.json()
-    console.log('Request data:', JSON.stringify(data, null, 2))
+    // Add timeout to all async operations
+    const timeout = (ms: number) => new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Operation timeout')), ms)
+    )
+    
+    const data: CreateCheckoutRequest = await Promise.race([
+      req.json(),
+      timeout(5000)
+    ]) as CreateCheckoutRequest
+    
+    console.log('Request data received successfully')
+    console.log('Student ID:', data.student_id)
+    console.log('Class name:', data.class_name)
     
     // Modo de teste simples - apenas validar credenciais
     if (data.class_name === 'TEST_MODE') {
-      console.log('Test mode activated - validating credentials only')
+      console.log('🧪 Test mode activated - comprehensive validation')
       
-      const asaasApiKey = Deno.env.get('ASAAS_API_KEY')
-      const asaasWalletId = Deno.env.get('ASAAS_WALLET_ID')
-      const asaasEnvironment = Deno.env.get('ASAAS_ENVIRONMENT') || 'sandbox'
-      
-      if (!asaasApiKey || !asaasWalletId) {
-        throw new Error('Missing credentials')
-      }
-      
-      const asaasBaseUrl = asaasEnvironment === 'sandbox' 
-        ? 'https://sandbox.asaas.com/api/v3'
-        : 'https://api.asaas.com/api/v3'
-      
-      // Teste simples: buscar 1 cliente
-      const testResponse = await fetch(`${asaasBaseUrl}/customers?limit=1`, {
-        headers: {
-          'access_token': asaasApiKey,
-          'Authorization': `Bearer ${asaasApiKey}`,
-          'Content-Type': 'application/json',
+      try {
+        const asaasApiKey = Deno.env.get('ASAAS_API_KEY')
+        const asaasWalletId = Deno.env.get('ASAAS_WALLET_ID')
+        const asaasEnvironment = Deno.env.get('ASAAS_ENVIRONMENT') || 'sandbox'
+        
+        console.log('🔍 Environment check:', {
+          hasApiKey: !!asaasApiKey,
+          hasWalletId: !!asaasWalletId,
+          environment: asaasEnvironment,
+          apiKeyLength: asaasApiKey?.length || 0,
+          apiKeyPrefix: asaasApiKey?.substring(0, 10) || 'NOT_SET'
+        })
+        
+        if (!asaasApiKey || !asaasWalletId) {
+          throw new Error(`Missing credentials: API_KEY=${!!asaasApiKey}, WALLET_ID=${!!asaasWalletId}`)
         }
-      })
-      
-      const testResult = await testResponse.text()
-      
-      return new Response(JSON.stringify({
-        test: true,
-        status: testResponse.status,
-        statusText: testResponse.statusText,
-        result: testResult.substring(0, 500) // Limitar tamanho da resposta
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+        
+        const asaasBaseUrl = asaasEnvironment === 'sandbox' 
+          ? 'https://sandbox.asaas.com/api/v3'
+          : 'https://api.asaas.com/api/v3'
+        
+        console.log('🌐 Testing API connection to:', asaasBaseUrl)
+        
+        // Teste de conectividade com a API do Asaas
+        const testResponse = await fetch(`${asaasBaseUrl}/customers?limit=1`, {
+          headers: {
+            'access_token': asaasApiKey,
+            'Authorization': `Bearer ${asaasApiKey}`,
+            'Content-Type': 'application/json',
+          }
+        })
+        
+        console.log('📡 API Response status:', testResponse.status, testResponse.statusText)
+        
+        let testResult = ''
+        try {
+          testResult = await testResponse.text()
+        } catch (e) {
+          testResult = `Error reading response: ${e.message}`
+        }
+        
+        let parsedResult
+        try {
+          parsedResult = JSON.parse(testResult)
+        } catch (e) {
+          parsedResult = { rawText: testResult.substring(0, 300) }
+        }
+        
+        console.log('✅ Test completed successfully')
+        
+        return new Response(JSON.stringify({
+          test: 'comprehensive',
+          timestamp: new Date().toISOString(),
+          environment: {
+            baseUrl: asaasBaseUrl,
+            environment: asaasEnvironment
+          },
+          credentials: {
+            hasApiKey: !!asaasApiKey,
+            hasWalletId: !!asaasWalletId,
+            apiKeyPrefix: asaasApiKey?.substring(0, 10) || 'NOT_SET'
+          },
+          apiTest: {
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            ok: testResponse.ok,
+            result: parsedResult
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+        
+      } catch (error) {
+        console.error('❌ Test mode failed:', error)
+        
+        return new Response(JSON.stringify({
+          test: 'failed',
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        })
+      }
     }
     
     // Configurações
@@ -103,18 +168,23 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 1. Check if student already has asaas_customer_id
+    // 1. Check if student already has asaas_customer_id (with timeout)
     console.log('Checking for existing Asaas customer for student:', data.student_id)
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('asaas_customer_id')
-      .eq('id', data.student_id)
-      .single()
+    const { data: studentData, error: studentError } = await Promise.race([
+      supabase
+        .from('students')
+        .select('asaas_customer_id')
+        .eq('id', data.student_id)
+        .single(),
+      timeout(10000)
+    ]) as any
 
     if (studentError) {
       console.error('Error fetching student data:', studentError)
-      throw new Error('Failed to fetch student data')
+      throw new Error(`Failed to fetch student data: ${studentError.message}`)
     }
+    
+    console.log('Student data retrieved successfully')
 
     let asaasCustomerId = studentData?.asaas_customer_id
 
@@ -125,16 +195,19 @@ serve(async (req) => {
       
       // Primeiro tenta buscar por CPF (para clientes criados antes da otimização)
       console.log('Searching for existing customer with CPF:', data.customer.cpfCnpj.replace(/\D/g, ''))
-      const searchResponse = await fetch(
-        `${asaasBaseUrl}/customers?cpfCnpj=${data.customer.cpfCnpj.replace(/\D/g, '')}`,
-        {
-          headers: {
-            'access_token': asaasApiKey,
-            'Authorization': `Bearer ${asaasApiKey}`,
-            'Content-Type': 'application/json',
+      const searchResponse = await Promise.race([
+        fetch(
+          `${asaasBaseUrl}/customers?cpfCnpj=${data.customer.cpfCnpj.replace(/\D/g, '')}`,
+          {
+            headers: {
+              'access_token': asaasApiKey,
+              'Authorization': `Bearer ${asaasApiKey}`,
+              'Content-Type': 'application/json',
+            }
           }
-        }
-      )
+        ),
+        timeout(15000)
+      ]) as Response
       
       console.log('Customer search response:', {
         status: searchResponse.status,
@@ -160,22 +233,25 @@ serve(async (req) => {
         phone: data.customer.phone.replace(/\D/g, '')
       })
       
-      const customerResponse = await fetch(`${asaasBaseUrl}/customers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'access_token': asaasApiKey,
-          'Authorization': `Bearer ${asaasApiKey}`,
-        },
-        body: JSON.stringify({
-          name: data.customer.name,
-          email: data.customer.email,
-          cpfCnpj: data.customer.cpfCnpj.replace(/\D/g, ''),
-          phone: data.customer.phone.replace(/\D/g, ''),
-          mobilePhone: data.customer.phone.replace(/\D/g, ''),
-          notificationDisabled: false,
-        })
-      })
+      const customerResponse = await Promise.race([
+        fetch(`${asaasBaseUrl}/customers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': asaasApiKey,
+            'Authorization': `Bearer ${asaasApiKey}`,
+          },
+          body: JSON.stringify({
+            name: data.customer.name,
+            email: data.customer.email,
+            cpfCnpj: data.customer.cpfCnpj.replace(/\D/g, ''),
+            phone: data.customer.phone.replace(/\D/g, ''),
+            mobilePhone: data.customer.phone.replace(/\D/g, ''),
+            notificationDisabled: false,
+          })
+        }),
+        timeout(15000)
+      ]) as Response
       
       console.log('Customer creation response:', {
         status: customerResponse.status,
@@ -244,7 +320,7 @@ serve(async (req) => {
     const endDate = new Date(startDate.getFullYear() + 1, startDate.getMonth(), dueDay)
 
     // 3. Criar checkout com assinatura recorrente
-    const checkoutPayload = {
+    const checkoutPayload: any = {
       billingTypes: [data.billing_type],
       chargeTypes: ["RECURRENT"],
       customerData: {
@@ -283,28 +359,39 @@ serve(async (req) => {
           type: "PERCENTAGE"
         }
       },
-      callbackConfiguration: {
+      externalReference: data.enrollment_id,
+      walletId: asaasWalletId
+    }
+    
+    // Adicionar callbacks apenas se não for localhost/desenvolvimento
+    const isLocalhost = frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1') || frontendUrl.includes('0.0.0.0')
+    if (!isLocalhost) {
+      console.log('Adding callback URLs for production environment')
+      checkoutPayload.callback = {
         successUrl: `${frontendUrl}/checkout/success?enrollment_id=${data.enrollment_id}`,
         cancelUrl: `${frontendUrl}/checkout/cancel`,
         expiredUrl: `${frontendUrl}/checkout/expired`,
         autoRedirect: true
-      },
-      externalReference: data.enrollment_id,
-      walletId: asaasWalletId
+      }
+    } else {
+      console.log('Skipping callback URLs for localhost/development environment')
     }
 
     console.log('Creating checkout with payload:', JSON.stringify(checkoutPayload, null, 2))
 
     console.log('Making checkout request to:', `${asaasBaseUrl}/checkouts`)
-    const checkoutResponse = await fetch(`${asaasBaseUrl}/checkouts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'access_token': asaasApiKey,
-        'Authorization': `Bearer ${asaasApiKey}`,
-      },
-      body: JSON.stringify(checkoutPayload)
-    })
+    const checkoutResponse = await Promise.race([
+      fetch(`${asaasBaseUrl}/checkouts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': asaasApiKey,
+          'Authorization': `Bearer ${asaasApiKey}`,
+        },
+        body: JSON.stringify(checkoutPayload)
+      }),
+      timeout(20000)
+    ]) as Response
     
     console.log('Checkout creation response:', {
       status: checkoutResponse.status,
@@ -331,13 +418,43 @@ serve(async (req) => {
         rawText: errorText
       })
       
-      // Analisar erro específico do Asaas
+      // Analisar erro específico do Asaas com logging melhorado
       let specificError = 'Failed to create checkout'
+      let detailedError = errorData
+      
+      console.log('🔍 Debugging error data structure:', {
+        errorDataType: typeof errorData,
+        errorDataKeys: errorData ? Object.keys(errorData) : 'null',
+        errorDataStringified: JSON.stringify(errorData, null, 2)
+      })
+      
       if (errorData?.errors) {
-        specificError = Object.values(errorData.errors).flat().join(', ')
+        if (typeof errorData.errors === 'object') {
+          // Handle both array and object error formats
+          if (Array.isArray(errorData.errors)) {
+            specificError = errorData.errors.map(e => e.description || e.message || JSON.stringify(e)).join(', ')
+          } else {
+            specificError = Object.values(errorData.errors).flat().join(', ')
+          }
+        } else {
+          specificError = String(errorData.errors)
+        }
+        detailedError = errorData.errors
       } else if (errorData?.message) {
         specificError = errorData.message
+      } else if (errorData?.error) {
+        specificError = errorData.error
+      } else if (typeof errorData === 'string') {
+        specificError = errorData
+      } else if (errorData) {
+        specificError = JSON.stringify(errorData)
       }
+      
+      console.error('🚨 Final error details:', {
+        specificError,
+        detailedError: JSON.stringify(detailedError, null, 2),
+        rawErrorText: errorText?.substring(0, 500)
+      })
       
       throw new Error(`Asaas Checkout Error (${checkoutResponse.status}): ${specificError}`)
     }

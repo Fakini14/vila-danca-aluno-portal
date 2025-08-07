@@ -260,11 +260,16 @@ function validatePhone(phone?: string): { valid: boolean; error?: string } {
   }
   
   // Remove non-digits
-  const cleanPhone = phone.replace(/\D/g, '');
+  let cleanPhone = phone.replace(/\D/g, '');
   
-  // Brazilian phone: should have 10 or 11 digits
+  // Remove country code (55) if present (13 digits total)
+  if (cleanPhone.length === 13 && cleanPhone.startsWith('55')) {
+    cleanPhone = cleanPhone.substring(2);
+  }
+  
+  // Brazilian phone: should have 10 or 11 digits after removing country code
   if (cleanPhone.length < 10 || cleanPhone.length > 11) {
-    return { valid: false, error: 'Telefone deve ter 10 ou 11 dígitos' };
+    return { valid: false, error: 'Telefone deve ter 10 ou 11 dígitos (sem código do país)' };
   }
   
   // Area code validation (11-99)
@@ -307,17 +312,14 @@ function sanitizeCPF(cpf: string): string {
 }
 
 function sanitizePhone(phone: string): string {
-  const clean = phone.replace(/\D/g, '');
+  let clean = phone.replace(/\D/g, '');
   
-  // Add country code if missing
-  if (clean.length === 11 && clean.startsWith('1')) {
-    return clean; // Already has area code
-  } else if (clean.length === 10) {
-    return clean; // 10 digits is valid
-  } else if (clean.length === 11) {
-    return clean; // 11 digits with mobile 9
+  // Remove country code (55) if present (13 digits total)
+  if (clean.length === 13 && clean.startsWith('55')) {
+    clean = clean.substring(2);
   }
   
+  // Return clean phone without country code for consistency
   return clean;
 }
 

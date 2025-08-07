@@ -45,15 +45,22 @@ export function StudentAvailableClasses() {
     try {
       if (!profile?.id) return;
       
-      // Get current student enrollments (both active and inactive to prevent duplicates)
+      // Get current student enrollments (only ACTIVE enrollments to allow re-enrollment)
       const { data: currentEnrollments, error: enrollmentError } = await supabase
         .from('enrollments')
-        .select('class_id, ativa')
-        .eq('student_id', profile.id);
+        .select('class_id')
+        .eq('student_id', profile.id)
+        .eq('ativa', true); // Only consider ACTIVE enrollments
 
       if (enrollmentError) throw enrollmentError;
 
       const enrolledClassIds = currentEnrollments?.map(e => e.class_id) || [];
+      
+      console.log('🔍 Active enrollments found:', {
+        studentId: profile.id,
+        activeEnrollments: currentEnrollments?.length || 0,
+        enrolledClassIds
+      });
 
       // Get all available classes with detailed info
       const { data, error } = await supabase
@@ -162,6 +169,14 @@ export function StudentAvailableClasses() {
 
     setValidatingStudent(classItem.id);
     setValidationError(null);
+    
+    console.log('🔍 Iniciando pré-validação para usuário:', profile.id);
+    console.log('📞 Dados do usuário para validação:', {
+      nome: profile.nome_completo,
+      email: profile.email,
+      cpf: profile.cpf,
+      whatsapp: profile.whatsapp
+    });
 
     try {
       // Primeiro validar dados do estudante
@@ -215,7 +230,7 @@ export function StudentAvailableClasses() {
       // Check if enrollment already exists (active or inactive)
       const { data: existingEnrollment, error: checkError } = await supabase
         .from('enrollments')
-        .select('id, ativa')
+        .select('id, ativa, created_at')
         .eq('student_id', profile.id)
         .eq('class_id', classItem.id)
         .maybeSingle();
@@ -233,6 +248,12 @@ export function StudentAvailableClasses() {
           });
           return;
         } else {
+          console.log('🔄 Reativando enrollment existente:', existingEnrollment.id);
+          toast({
+            title: 'Tentativa anterior encontrada',
+            description: 'Detectamos uma tentativa de matrícula anterior. Criando novo processo de pagamento...',
+          });
+          
           // Reactivate existing enrollment
           const { data: reactivatedEnrollment, error: reactivateError } = await supabase
             .from('enrollments')
@@ -288,9 +309,38 @@ export function StudentAvailableClasses() {
 
       if (checkoutError) {
         console.error('❌ Checkout creation error:', checkoutError);
+        console.error('❌ Checkout error details:', {
+          message: checkoutError.message,
+          status: checkoutError.status,
+          context: checkoutError.context,
+          stack: checkoutError.stack
+        });
         
         const errorData = checkoutError.context?.body;
         const userMessage = errorData?.userMessage || checkoutError.message;
+        
+        // Tentar extrair mais detalhes do erro da Response
+        let responseText = 'N/A';
+        let responseStatus = 'N/A';
+        if (checkoutError.context instanceof Response) {
+          responseStatus = checkoutError.context.status;
+          try {
+            // Tentar ler o corpo da resposta
+            const responseClone = checkoutError.context.clone();
+            responseText = await responseClone.text();
+          } catch (e) {
+            console.warn('Não foi possível ler o corpo da resposta:', e);
+          }
+        }
+        
+        // Exibir erro detalhado no console para debug
+        console.log('🐛 DEBUG - Error details for troubleshooting:', {
+          errorData,
+          userMessage,
+          fullError: checkoutError,
+          responseStatus,
+          responseText: responseText.substring(0, 1000) // Limitar tamanho
+        });
         
         if (errorData?.error?.includes('Asaas credentials not configured') || checkoutError.status === 503) {
           toast({

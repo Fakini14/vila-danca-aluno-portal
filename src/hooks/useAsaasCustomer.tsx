@@ -77,12 +77,15 @@ export function useAsaasCustomer(): UseAsaasCustomerReturn {
 
   // Validar dados do estudante
   const validateStudentData = useCallback(async (studentId: string): Promise<ValidationResult> => {
-    // Verificar cache primeiro
+    // Verificar cache primeiro (comentado temporariamente para debug)
     const cached = validationCache.get(studentId);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       console.log('🚀 Using cached validation for student:', studentId);
-      return cached.result;
+      console.log('🗂️ Cached result:', cached.result);
+      // return cached.result; // Desabilitado para debug
     }
+    
+    console.log('🔄 Performing fresh validation for student:', studentId);
 
     try {
       const { data: student, error: fetchError } = await withTimeout(
@@ -115,8 +118,16 @@ export function useAsaasCustomer(): UseAsaasCustomerReturn {
         throw new Error('Estudante não encontrado');
       }
 
+      console.log('📋 Dados do estudante obtidos:', JSON.stringify(student, null, 2));
+      
       // Usar o novo utilitário de validação
       const validation = validateStudentForAsaas(student as StudentValidationData);
+      
+      console.log('✅ Resultado da validação:', {
+        valid: validation.valid,
+        errors: validation.errors,
+        warnings: validation.warnings
+      });
       
       const result: ValidationResult = {
         valid: validation.valid,
@@ -125,6 +136,8 @@ export function useAsaasCustomer(): UseAsaasCustomerReturn {
         errors: validation.errors.map(err => err.message),
         validationErrors: validation.errors,
       };
+      
+      console.log('📊 Resultado final da validação:', result);
 
       // Log de warnings se existirem
       if (validation.warnings.length > 0) {

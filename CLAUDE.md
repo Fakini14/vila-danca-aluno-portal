@@ -168,7 +168,7 @@ When working with this codebase:
 8. Follow existing file naming conventions (PascalCase for components, kebab-case for pages)
 9. Server runs on port 8080 (configured in vite.config.ts)
 
-## =� Common Development Tasks
+## =� Common Development Tasks
 
 ### Adding a New Feature
 1. Create components in the appropriate directory (`admin/`, `student/`, `teacher/`)
@@ -319,3 +319,9 @@ For detailed technical information, refer to the specialized documentation in th
   - SQL scripts for Supabase execution
   - Step-by-step migration instructions
   - Post-migration verifications
+
+## Supabase JWT Update Reminders
+- **IMPORTANT:** Verify Supabase JWT signing keys configuration
+- Recommended: https://supabase.com/blog/jwt-signing-keys
+  - Check that anon_keys are no longer being used
+  - Update JWT configuration to use new signing methods

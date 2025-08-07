@@ -270,4 +270,45 @@ Este arquivo fornece o roteiro de desenvolvimento e lições aprendidas para o C
 
 ---
 
+## 🚨 **PROBLEMA CRÍTICO NÃO RESOLVIDO**
+
+### **Issue #1: Sistema de Matrícula de Estudantes - BLOQUEIO TOTAL**
+**Status**: 🔴 **CRÍTICO - NÃO RESOLVIDO**
+**Impacto**: Sistema de pagamento completamente inoperante
+
+**Descrição do Problema**:
+Estudantes não conseguem completar matrículas devido a timeouts/erros de rede na Edge Function ao criar checkout Asaas.
+
+**Detalhes Técnicos**:
+- **Erro Frontend**: "Failed to send a request to the Edge Function" (FunctionsFetchError)
+- **Edge Function**: `create-subscription-checkout` apresenta timeouts e crashes
+- **Status HTTP**: 502/500 retornados pela função
+- **Timeout**: Ocorre mesmo com limite de 30 segundos
+- **Ambiente**: Afeta desenvolvimento local (localhost)
+- **Possível Causa**: Integração ASAAS API ou consultas ao banco
+
+**Tentativas de Correção (FALHARAM)**:
+1. ✅ Corrigido problemas de callback URL (detecção localhost implementada)
+2. ✅ Adicionados timeouts abrangentes a todas operações HTTP
+3. ✅ Melhorado logging e debugging
+4. ✅ Atualizado Edge Function para versão 19 com tratamento de erro aprimorado
+5. ❌ **PROBLEMA PERSISTE** - função continua com timeout durante execução
+
+**Impacto no Negócio**:
+- 🚫 Estudantes não conseguem se matricular em aulas
+- 🚫 Sistema de pagamento totalmente não funcional
+- 🚫 Fluxo de trabalho principal do negócio bloqueado
+- 🚫 Receita comprometida
+
+**Próximos Passos Necessários**:
+- 🔍 Investigação profunda do ambiente de execução da Edge Function
+- 🔄 Possível simplificação da integração ASAAS
+- 🏗️ Considerar arquitetura alternativa para fluxo de pagamento
+- 🧪 Teste em ambiente de produção Supabase (não localhost)
+- 📊 Análise de logs detalhados da Edge Function
+
+**Prioridade**: **MÁXIMA** - Bloqueia funcionalidade central do sistema
+
+---
+
 **Última atualização**: 07/08/2025
