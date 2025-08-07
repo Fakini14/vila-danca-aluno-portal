@@ -86,10 +86,8 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             nome,
             color
           ),
-          class_teachers(
-            profiles(
-              nome_completo
-            )
+          professor:profiles!professor_principal_id(
+            nome_completo
           )
         `)
         .eq('ativa', true);
@@ -126,7 +124,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             color: cls.class_types?.color || '#6366f1',
           },
           teacher: {
-            nome_completo: cls.class_teachers?.[0]?.profiles?.nome_completo || 'Professor não definido',
+            nome_completo: cls.professor?.nome_completo || 'Professor não definido',
           },
         })) || [];
 

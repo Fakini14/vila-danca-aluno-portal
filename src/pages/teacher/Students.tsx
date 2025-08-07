@@ -67,9 +67,10 @@ const useTeacherStudents = (teacherId: string, classFilter: string) => {
       try {
         // Primeiro, buscar as turmas do professor
         const { data: teacherClasses, error: classError } = await supabase
-          .from('class_teachers')
-          .select('class_id')
-          .eq('teacher_id', teacherId);
+          .from('classes')
+          .select('id')
+          .eq('professor_principal_id', teacherId)
+          .eq('ativa', true);
 
         if (classError) {
           console.error('Erro ao buscar turmas do professor:', classError);
@@ -80,7 +81,7 @@ const useTeacherStudents = (teacherId: string, classFilter: string) => {
           return []; // Professor não tem turmas
         }
 
-        const classIds = teacherClasses.map(ct => ct.class_id);
+        const classIds = teacherClasses.map(c => c.id);
 
         // Buscar enrollments das turmas do professor
         let enrollmentQuery = supabase

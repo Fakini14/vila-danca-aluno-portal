@@ -25,11 +25,9 @@ interface Class {
   ativa: boolean;
   professor_principal_id: string | null;
   sala: string | null;
-  class_teachers: Array<{
-    profiles: {
-      nome_completo: string;
-    };
-  }>;
+  professor?: {
+    nome_completo: string;
+  } | null;
   current_enrollments?: number;
 }
 
@@ -63,10 +61,8 @@ export function StudentAvailableClasses() {
         .from('classes')
         .select(`
           *,
-          class_teachers(
-            profiles(
-              nome_completo
-            )
+          professor:profiles!professor_principal_id(
+            nome_completo
           )
         `)
         .eq('ativa', true)
@@ -400,10 +396,6 @@ export function StudentAvailableClasses() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {classes.map((classItem) => {
-          const maxCapacity = 20; // Default capacity for all classes
-          const isFull = (classItem.current_enrollments || 0) >= maxCapacity;
-          const spotsLeft = maxCapacity - (classItem.current_enrollments || 0);
-          
           return (
             <Card key={classItem.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
@@ -419,7 +411,6 @@ export function StudentAvailableClasses() {
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">{classItem.modalidade}</Badge>
                       <Badge variant="outline">{classItem.nivel}</Badge>
-                      {isFull && <Badge variant="destructive">Lotada</Badge>}
                     </div>
                   </div>
                 </div>
@@ -442,17 +433,14 @@ export function StudentAvailableClasses() {
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span>
-                      {classItem.current_enrollments || 0}/{maxCapacity} alunos
-                      {!isFull && spotsLeft <= 3 && (
-                        <span className="text-amber-600 ml-1">({spotsLeft} vagas)</span>
-                      )}
+                      {classItem.current_enrollments || 0} alunos matriculados
                     </span>
                   </div>
 
-                  {classItem.class_teachers?.[0] && (
+                  {classItem.professor && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>Prof. {classItem.class_teachers[0].profiles?.nome_completo}</span>
+                      <span>Prof. {classItem.professor.nome_completo}</span>
                     </div>
                   )}
 
@@ -472,14 +460,14 @@ export function StudentAvailableClasses() {
                         {formatCurrency(classItem.valor_aula)}/mês
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        Cobrança automática todo dia 10
+                        Cobrança mensal no dia da matrícula
                       </div>
                     </div>
                   </div>
                   
                   <Button 
                     className="w-full" 
-                    disabled={isFull || enrollingClass === classItem.id || validatingStudent === classItem.id}
+                    disabled={enrollingClass === classItem.id || validatingStudent === classItem.id}
                     onClick={() => handleEnrollment(classItem)}
                   >
                     {validatingStudent === classItem.id ? (
@@ -495,7 +483,7 @@ export function StudentAvailableClasses() {
                     ) : (
                       <>
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        {isFull ? 'Turma Lotada' : 'Assinar Mensalidade'}
+                        Assinar Mensalidade
                       </>
                     )}
                   </Button>

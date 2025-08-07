@@ -50,29 +50,28 @@ const useTeacherClasses = (teacherId: string) => {
     queryKey: ['teacher-classes', teacherId],
     queryFn: async (): Promise<TeacherClass[]> => {
       try {
+        // Buscar turmas onde o professor é o professor principal
         const { data, error } = await supabase
-          .from('class_teachers')
+          .from('classes')
           .select(`
-            classes (
-              id,
-              nome,
-              modalidade,
-              nivel,
-              dias_semana,
-              horario_inicio,
-              horario_fim,
-              sala,
-            )
+            id,
+            nome,
+            modalidade,
+            nivel,
+            dias_semana,
+            horario_inicio,
+            horario_fim,
+            sala
           `)
-          .eq('teacher_id', teacherId);
+          .eq('professor_principal_id', teacherId)
+          .eq('ativa', true);
 
         if (error) {
           console.error('Erro na query teacher classes:', error);
           throw error;
         }
 
-        // Buscar enrollments separadamente para evitar complexidade
-        const classesData = data?.map(item => item.classes).filter(Boolean) || [];
+        const classesData = data || [];
         
         // Para cada turma, buscar os enrollments
         for (const turma of classesData) {
@@ -264,9 +263,6 @@ export default function TeacherClasses() {
                       {getActiveStudentsCount(turma.enrollments || [])} alunos matriculados
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    Capacidade: 20
-                  </span>
                 </div>
 
                 {/* Ações */}

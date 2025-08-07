@@ -106,7 +106,7 @@ export function useTeacherCommissions(teacherId: string, month?: string, year?: 
             nome,
             modalidade,
             valor_aula,
-            class_teachers!class_teachers_teacher_id_fkey(comissao_percentual)
+            comissao_percentual
           ),
           students(profiles(nome_completo))
         `)

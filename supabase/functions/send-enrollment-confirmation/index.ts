@@ -61,11 +61,8 @@ serve(async (req) => {
             nome,
             color
           ),
-          class_teachers(
-            teacher_id,
-            profiles:teacher_id(
-              nome_completo
-            )
+          professor:profiles!professor_principal_id(
+            nome_completo
           )
         )
       `)
@@ -102,7 +99,7 @@ serve(async (req) => {
           <strong>Modalidade:</strong> ${enrollment.classes.class_types?.nome || 'N/A'}
         </p>
         <p style="margin: 4px 0; color: #64748b; font-size: 14px;">
-          <strong>Professor(a):</strong> ${enrollment.classes.class_teachers?.[0]?.profiles?.nome_completo || 'A definir'}
+          <strong>Professor(a):</strong> ${enrollment.classes.professor?.nome_completo || 'A definir'}
         </p>
         <p style="margin: 4px 0; color: #64748b; font-size: 14px;">
           <strong>Horário:</strong> ${formatDaysOfWeek(enrollment.classes.dias_semana)} - ${formatTime(enrollment.classes.horario_inicio)} às ${formatTime(enrollment.classes.horario_fim)}
