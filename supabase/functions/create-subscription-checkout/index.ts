@@ -68,15 +68,18 @@ serve(async (req) => {
 
     console.log('✅ Validações de entrada concluídas')
 
-    // Verificar se o estudante existe
+    // Verificar se o estudante existe e buscar dados completos
     console.log('🔍 Verificando se estudante existe...')
     const { data: studentData, error: studentError } = await supabase
       .from('students')
       .select(`
         id,
+        asaas_customer_id,
         profiles!students_id_fkey(
           nome_completo,
-          email
+          email,
+          cpf,
+          whatsapp
         )
       `)
       .eq('id', student_id)
@@ -159,12 +162,92 @@ serve(async (req) => {
       checkoutToken = existingEnrollment.checkout_token
       checkoutUrl = existingEnrollment.checkout_url || null
     } else if (create_enrollment) {
-      // Criar novo enrollment pendente
+      // Criar novo enrollment pendente com integração Asaas
       console.log('📝 Criando novo enrollment pendente...')
       
       const newToken = crypto.randomUUID()
-      const mockCheckoutUrl = `https://sandbox.asaas.com/checkout/${newToken}?student=${encodeURIComponent(studentData.profiles?.nome_completo || '')}&class=${encodeURIComponent(classData.nome || classData.modalidade)}&value=${classData.valor_aula}`
       
+      // Configurações do Asaas
+      const asaasEnvironment = Deno.env.get('ASAAS_ENVIRONMENT') || 'sandbox'
+      const asaasApiKey = Deno.env.get('ASAAS_API_KEY')
+      const asaasUrl = asaasEnvironment === 'sandbox' 
+        ? 'https://api-sandbox.asaas.com/api/v3'
+        : 'https://api.asaas.com/v3'
+
+      if (!asaasApiKey) {
+        throw new Error('ASAAS_API_KEY não configurada')
+      }
+
+      console.log('🔄 Conectando com Asaas...', { environment: asaasEnvironment })
+
+      // Verificar se já tem customer no Asaas
+      let customerAsaasId = studentData.asaas_customer_id
+      
+      if (!customerAsaasId) {
+        console.log('🔍 Customer Asaas não encontrado, criando...')
+        // Chamar função existente create-asaas-customer
+        const customerResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/create-asaas-customer`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ student_id })
+        })
+
+        if (!customerResponse.ok) {
+          console.error('❌ Erro ao criar customer Asaas')
+          throw new Error('Falha ao criar customer no Asaas')
+        }
+
+        const customerResult = await customerResponse.json()
+        customerAsaasId = customerResult.asaas_customer_id
+        console.log('✅ Customer Asaas criado:', customerAsaasId)
+      }
+
+      // Calcular próxima data de vencimento (7 dias)
+      const nextDueDate = new Date()
+      nextDueDate.setDate(nextDueDate.getDate() + 7)
+      const dueDateFormatted = nextDueDate.toISOString().split('T')[0]
+
+      // Preparar dados do checkout
+      const checkoutData = {
+        billingTypes: ["CREDIT_CARD", "BOLETO", "PIX"],
+        name: `Matrícula - ${classData.nome || classData.modalidade}`,
+        description: `Mensalidade do curso ${classData.nome || classData.modalidade} - ${classData.nivel}`,
+        value: Number(classData.valor_aula),
+        dueDateLimitDays: 5,
+        customer: customerAsaasId,
+        callback: {
+          successUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/checkout-success?enrollment=${newToken}`,
+          autoRedirect: true
+        }
+      }
+
+      console.log('📤 Enviando para Asaas:', JSON.stringify(checkoutData, null, 2))
+
+      // Criar payment link no Asaas
+      const checkoutResponse = await fetch(`${asaasUrl}/paymentLinks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': asaasApiKey
+        },
+        body: JSON.stringify(checkoutData)
+      })
+
+      const checkoutResult = await checkoutResponse.json()
+
+      console.log('📥 Resposta do Asaas:', JSON.stringify(checkoutResult, null, 2))
+
+      if (!checkoutResponse.ok) {
+        console.error('❌ Erro na API Asaas:', checkoutResult)
+        throw new Error(`Asaas Error: ${checkoutResult.description || checkoutResult.errors?.[0]?.description || 'Erro desconhecido'}`)
+      }
+
+      console.log('✅ Payment link criado no Asaas:', checkoutResult.url)
+
+      // Criar enrollment no banco com dados reais do Asaas
       const { data: newEnrollment, error: createError } = await supabase
         .from('enrollments')
         .insert({
@@ -175,10 +258,12 @@ serve(async (req) => {
           status: 'pending',
           valor_pago_matricula: 0,
           checkout_token: newToken,
-          checkout_url: mockCheckoutUrl,
+          checkout_url: checkoutResult.url, // URL real do Asaas
+          asaas_checkout_id: checkoutResult.id, // ID do Asaas
+          asaas_checkout_url: checkoutResult.url, // URL do Asaas
           checkout_created_at: new Date().toISOString()
         })
-        .select('id, checkout_token, checkout_url')
+        .select('id, checkout_token, checkout_url, asaas_checkout_id')
         .single()
 
       if (createError) {
@@ -189,12 +274,13 @@ serve(async (req) => {
       enrollmentId = newEnrollment.id
       checkoutToken = newEnrollment.checkout_token
       checkoutUrl = newEnrollment.checkout_url
-      responseMessage = 'Enrollment pendente criado - checkout disponível'
+      responseMessage = 'Enrollment pendente criado - checkout Asaas disponível'
       
-      console.log('✅ Enrollment pendente criado:', {
+      console.log('✅ Enrollment pendente criado com Asaas:', {
         id: enrollmentId,
         token: checkoutToken,
-        url: checkoutUrl
+        url: checkoutUrl,
+        asaas_id: newEnrollment.asaas_checkout_id
       })
     } else {
       // Apenas validação - não criar enrollment
