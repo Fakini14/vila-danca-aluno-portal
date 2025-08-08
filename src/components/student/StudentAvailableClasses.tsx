@@ -225,9 +225,8 @@ export function StudentAvailableClasses() {
 
     try {
       const enrollmentDate = new Date().toISOString().split('T')[0];
-      const monthlyValue = classItem.valor_aula || 150;
 
-      // Check if enrollment already exists (active or inactive)
+      // Check if enrollment already exists (active)
       const { data: existingEnrollment, error: checkError } = await supabase
         .from('enrollments')
         .select('id, ativa, created_at')
@@ -237,40 +236,34 @@ export function StudentAvailableClasses() {
 
       if (checkError) throw checkError;
 
+      if (existingEnrollment && existingEnrollment.ativa) {
+        toast({
+          title: 'Já matriculado',
+          description: 'Você já está matriculado nesta turma.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Create or reactivate enrollment (now active immediately)
       let enrollment;
-
       if (existingEnrollment) {
-        if (existingEnrollment.ativa) {
-          toast({
-            title: 'Já matriculado',
-            description: 'Você já está matriculado nesta turma.',
-            variant: 'destructive',
-          });
-          return;
-        } else {
-          console.log('🔄 Reativando enrollment existente:', existingEnrollment.id);
-          toast({
-            title: 'Tentativa anterior encontrada',
-            description: 'Detectamos uma tentativa de matrícula anterior. Criando novo processo de pagamento...',
-          });
-          
-          // Reactivate existing enrollment
-          const { data: reactivatedEnrollment, error: reactivateError } = await supabase
-            .from('enrollments')
-            .update({ 
-              ativa: false, // Will be activated after payment
-              data_matricula: enrollmentDate,
-              valor_pago_matricula: 0
-            })
-            .eq('id', existingEnrollment.id)
-            .select()
-            .single();
+        // Reactivate existing enrollment
+        const { data: reactivatedEnrollment, error: reactivateError } = await supabase
+          .from('enrollments')
+          .update({ 
+            ativa: true, // Activated immediately
+            data_matricula: enrollmentDate,
+            valor_pago_matricula: 0
+          })
+          .eq('id', existingEnrollment.id)
+          .select()
+          .single();
 
-          if (reactivateError) throw reactivateError;
-          enrollment = reactivatedEnrollment;
-        }
+        if (reactivateError) throw reactivateError;
+        enrollment = reactivatedEnrollment;
       } else {
-        // Create new enrollment (initially inactive)
+        // Create new enrollment (active immediately)
         const { data: newEnrollment, error: enrollmentError } = await supabase
           .from('enrollments')
           .insert({
@@ -278,7 +271,7 @@ export function StudentAvailableClasses() {
             class_id: classItem.id,
             data_matricula: enrollmentDate,
             valor_pago_matricula: 0,
-            ativa: false, // Will be activated after first payment
+            ativa: true, // Activated immediately
           })
           .select()
           .single();
@@ -287,98 +280,35 @@ export function StudentAvailableClasses() {
         enrollment = newEnrollment;
       }
 
-      // Call create-subscription-checkout edge function
-      console.log('🚀 Criando checkout de assinatura...');
-      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-subscription-checkout', {
-        body: {
-          student_id: profile.id,
-          enrollment_id: enrollment.id,
-          class_id: classItem.id,
-          billing_type: 'CREDIT_CARD',
-          customer: {
-            name: profile.nome_completo,
-            email: profile.email,
-            cpfCnpj: profile.cpf,
-            phone: profile.whatsapp
-          },
-          value: monthlyValue,
-          class_name: classItem.nome || classItem.modalidade,
-          due_day: 10
-        }
+      // Ensure Asaas customer exists for future use
+      console.log('🚀 Criando cliente Asaas se necessário...');
+      try {
+        await ensureAsaasCustomer(profile.id);
+      } catch (customerError) {
+        console.warn('⚠️ Erro ao criar cliente Asaas (não crítico):', customerError);
+        // Continue with enrollment even if customer creation fails
+      }
+
+      toast({
+        title: 'Matrícula realizada!',
+        description: `Você foi matriculado na turma ${classItem.nome || classItem.modalidade} com sucesso.`,
       });
 
-      if (checkoutError) {
-        console.error('❌ Checkout creation error:', checkoutError);
-        console.error('❌ Checkout error details:', {
-          message: checkoutError.message,
-          status: checkoutError.status,
-          context: checkoutError.context,
-          stack: checkoutError.stack
-        });
-        
-        const errorData = checkoutError.context?.body;
-        const userMessage = errorData?.userMessage || checkoutError.message;
-        
-        // Tentar extrair mais detalhes do erro da Response
-        let responseText = 'N/A';
-        let responseStatus = 'N/A';
-        if (checkoutError.context instanceof Response) {
-          responseStatus = checkoutError.context.status;
-          try {
-            // Tentar ler o corpo da resposta
-            const responseClone = checkoutError.context.clone();
-            responseText = await responseClone.text();
-          } catch (e) {
-            console.warn('Não foi possível ler o corpo da resposta:', e);
-          }
-        }
-        
-        // Exibir erro detalhado no console para debug
-        console.log('🐛 DEBUG - Error details for troubleshooting:', {
-          errorData,
-          userMessage,
-          fullError: checkoutError,
-          responseStatus,
-          responseText: responseText.substring(0, 1000) // Limitar tamanho
-        });
-        
-        if (errorData?.error?.includes('Asaas credentials not configured') || checkoutError.status === 503) {
-          toast({
-            title: 'Configuração Pendente',
-            description: 'O sistema de pagamento ainda não foi configurado. Entre em contato com a administração.',
-            variant: 'destructive'
-          });
-          return;
-        }
-        
-        throw new Error(`Erro ao criar checkout: ${userMessage || 'Tente novamente'}`);
-      }
-
-      if (checkoutData?.checkout?.url) {
-        console.log('✅ Checkout criado com sucesso, redirecionando...');
-        window.location.href = checkoutData.checkout.url;
-      } else {
-        toast({
-          title: 'Erro no checkout',
-          description: 'Não foi possível gerar o link de pagamento. Tente novamente.',
-          variant: 'destructive'
-        });
-      }
+      // Refresh the available classes list
+      fetchAvailableClasses();
 
     } catch (error: unknown) {
       console.error('❌ Erro ao criar matrícula:', error);
       
-      let errorMessage = 'Não foi possível iniciar o processo de matrícula. Tente novamente.';
+      let errorMessage = 'Não foi possível realizar a matrícula. Tente novamente.';
       
       const errorObj = error as { code?: string; message?: string; status?: number };
       if (errorObj?.code === '23505' || errorObj?.message?.includes('duplicate key')) {
-        errorMessage = 'Você já possui uma matrícula para esta turma. Verifique suas assinaturas ativas.';
+        errorMessage = 'Você já possui uma matrícula para esta turma.';
       } else if (errorObj?.message?.includes('No authorization header') || errorObj?.message?.includes('No API key')) {
         errorMessage = 'Sessão expirada. Faça login novamente.';
       } else if (errorObj?.status === 401) {
         errorMessage = 'Acesso não autorizado. Verifique suas credenciais.';
-      } else if (errorObj?.message?.includes('Configuração Pendente') || errorObj?.message?.includes('Asaas credentials')) {
-        errorMessage = 'O sistema de pagamento ainda não foi configurado. Entre em contato com a administração.';
       } else if (errorObj?.message) {
         errorMessage = errorObj.message;
       }
@@ -478,12 +408,12 @@ export function StudentAvailableClasses() {
                 <div className="border-t pt-4">
                   <div className="mb-3">
                     <div className="text-center">
-                      <div className="text-sm text-muted-foreground">Assinatura Mensal</div>
+                      <div className="text-sm text-muted-foreground">Valor da Mensalidade</div>
                       <div className="text-2xl font-bold text-primary">
                         {formatCurrency(classItem.valor_aula)}/mês
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        Cobrança mensal no dia da matrícula
+                        Pagamento direto na escola
                       </div>
                     </div>
                   </div>
@@ -506,7 +436,7 @@ export function StudentAvailableClasses() {
                     ) : (
                       <>
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        Assinar Mensalidade
+                        Matricular-se
                       </>
                     )}
                   </Button>

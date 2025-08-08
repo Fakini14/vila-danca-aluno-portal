@@ -39,7 +39,7 @@ interface EnrollmentModalProps {
 
 type PaymentMethod = 'online' | 'dinheiro';
 
-type EnrollmentStep = 1 | 2 | 3;
+type EnrollmentStep = 1 | 2;
 
 export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: EnrollmentModalProps) {
   const [currentStep, setCurrentStep] = useState<EnrollmentStep>(1);
@@ -59,7 +59,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
       setSelectedClasses([]);
       setEnrollmentDate(format(new Date(), 'yyyy-MM-dd'));
       setMatriculaFee(0);
-      setSelectedPaymentMethod('online');
+      setSelectedPaymentMethod('dinheiro');
     }
   }, [open, studentId, fetchAvailableClasses]);
 
@@ -228,60 +228,13 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
 
         if (paymentError) throw paymentError;
 
-        // If online payment, redirect to checkout
-        if (selectedPaymentMethod === 'online') {
-          // Get student profile for customer data
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', studentId)
-            .single();
-
-          if (profile) {
-            // Call create-enrollment-payment edge function
-            const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('create-enrollment-payment', {
-              body: {
-                payment_id: payment.id,
-                student_id: studentId,
-                enrollment_ids: enrollments.map(e => e.id),
-                amount: matriculaFee,
-                description: `Matrícula - ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''}`,
-                due_date: enrollmentDate,
-                customer: {
-                  name: profile.nome_completo,
-                  email: profile.email,
-                  cpfCnpj: profile.cpf,
-                  phone: profile.whatsapp || profile.telefone
-                }
-              }
-            });
-
-            if (checkoutError) throw checkoutError;
-
-            if (checkoutData?.checkout_url) {
-              // Open checkout in new window
-              window.open(checkoutData.checkout_url, '_blank');
-              
-              toast({
-                title: 'Redirecionando para o pagamento',
-                description: 'Uma nova janela foi aberta para finalizar o pagamento.',
-              });
-            }
-          }
-        }
+        // Note: Online payment removed, only cash payment supported
       }
 
-      if (selectedPaymentMethod === 'dinheiro') {
-        toast({
-          title: 'Sucesso',
-          description: `Aluno matriculado em ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''} com sucesso`,
-        });
-      } else {
-        toast({
-          title: 'Matrícula iniciada',
-          description: 'A matrícula será confirmada após o pagamento.',
-        });
-      }
+      toast({
+        title: 'Sucesso',
+        description: `Aluno matriculado em ${selectedClasses.length} turma${selectedClasses.length > 1 ? 's' : ''} com sucesso`,
+      });
 
       onSuccess();
       onOpenChange(false);
@@ -328,7 +281,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
       return;
     }
     
-    if (currentStep < 3) {
+    if (currentStep < 2) {
       setCurrentStep((prev) => (prev + 1) as EnrollmentStep);
     }
   };
@@ -342,8 +295,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
   const getStepTitle = () => {
     switch (currentStep) {
       case 1: return 'Selecionar Turmas';
-      case 2: return 'Confirmar Dados';
-      case 3: return 'Forma de Pagamento';
+      case 2: return 'Confirmar Matrícula';
       default: return 'Nova Matrícula';
     }
   };
@@ -359,7 +311,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
           
           {/* Step Indicator */}
           <div className="flex items-center justify-center space-x-4 mt-4">
-            {[1, 2, 3].map((step) => (
+            {[1, 2].map((step) => (
               <div key={step} className="flex items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -372,7 +324,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
                 >
                   {step}
                 </div>
-                {step < 3 && (
+                {step < 2 && (
                   <div
                     className={`w-12 h-0.5 ml-2 ${
                       step < currentStep ? 'bg-primary' : 'bg-muted'
@@ -578,110 +530,6 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             </>
           )}
 
-          {/* Step 3: Checkout E-commerce */}
-          {currentStep === 3 && (
-            <>
-              <div>
-                <h4 className="font-medium mb-4">Finalizar Matrícula</h4>
-                
-                <div className="space-y-4">
-                  <div className="p-6 border rounded-lg bg-gradient-to-r from-primary/5 to-primary/10">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <DollarSign className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h5 className="font-semibold">Pagamento Online Seguro</h5>
-                        <p className="text-sm text-muted-foreground">Powered by Asaas - Gateway de pagamento brasileiro</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span>PIX Instantâneo</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <span>Boleto Bancário</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                        <span>Cartão de Crédito</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-                      <div className="text-sm text-amber-800">
-                        <p className="font-medium">Importante:</p>
-                        <p>• A matrícula será confirmada após o pagamento</p>
-                        <p>• Você receberá um email de confirmação</p>
-                        <p>• Em caso de dúvidas, entre em contato conosco</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div
-                      className="border rounded-lg p-4 cursor-pointer transition-colors hover:border-primary hover:bg-primary/5"
-                      onClick={() => setSelectedPaymentMethod('online')}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full border-2 border-primary bg-primary" />
-                        <div>
-                          <p className="font-medium">Pagamento Online</p>
-                          <p className="text-sm text-muted-foreground">PIX, Boleto ou Cartão</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      className="border rounded-lg p-4 cursor-pointer transition-colors hover:border-muted-foreground"
-                      onClick={() => setSelectedPaymentMethod('dinheiro')}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded-full border-2 ${
-                          selectedPaymentMethod === 'dinheiro' 
-                            ? 'border-primary bg-primary' 
-                            : 'border-muted-foreground'
-                        }`} />
-                        <div>
-                          <p className="font-medium">Pagamento em Dinheiro</p>
-                          <p className="text-sm text-muted-foreground">Registrar manualmente</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2">Resumo Final</h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Turmas:</p>
-                    <p className="font-medium">{selectedClasses.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Valor mensal:</p>
-                    <p className="font-medium">R$ {totalMonthlyValue.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Taxa matrícula:</p>
-                    <p className="font-medium">R$ {matriculaFee.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Total a pagar:</p>
-                    <p className="font-bold text-primary">R$ {matriculaFee.toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
 
           {/* Navigation Actions */}
           <div className="flex justify-between pt-4 border-t">
@@ -698,7 +546,7 @@ export function EnrollmentModal({ open, onOpenChange, studentId, onSuccess }: En
             </div>
             
             <div>
-              {currentStep < 3 ? (
+              {currentStep < 2 ? (
                 <Button onClick={handleNext} className="dance-gradient">
                   Próximo
                   <ChevronRight className="ml-2 h-4 w-4" />

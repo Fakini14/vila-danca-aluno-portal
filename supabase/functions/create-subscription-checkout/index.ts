@@ -4,519 +4,229 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE',
-  'Access-Control-Max-Age': '86400',
 }
 
-interface CreateCheckoutRequest {
+interface CreateSubscriptionCheckoutRequest {
   student_id: string;
-  enrollment_id: string;
   class_id: string;
-  billing_type: 'CREDIT_CARD' | 'PIX' | 'BOLETO';
-  customer: {
-    name: string;
-    email: string;
-    cpfCnpj: string;
-    phone: string;
+  create_enrollment?: boolean; // Default: true para Etapa 2, false para apenas validação
+}
+
+interface CheckoutResponse {
+  success: boolean;
+  checkout_url?: string | null;
+  enrollment_id?: string | null; // ID do enrollment criado 
+  checkout_token?: string | null; // Token para rastrear checkout
+  enrollment_data?: {
+    student_id: string;
+    class_id: string;
+    class_name: string;
+    monthly_value: number;
+    enrollment_fee: number;
+    student_name: string;
+    already_enrolled: boolean;
+    enrollment_status?: string; // pending, active, cancelled
   };
-  value: number;
-  class_name: string;
-  due_day?: number;
+  message: string;
+  error?: string;
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('🔧 CORS preflight request received')
-    console.log('🔧 Request headers:', Object.fromEntries(req.headers.entries()))
-    console.log('🔧 Responding with CORS headers:', corsHeaders)
-    return new Response(null, { 
-      status: 200,
-      headers: corsHeaders 
-    })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    console.log('🚀 POST Request received for create-subscription-checkout')
-    console.log('🌐 Request method:', req.method)
-    console.log('🌐 Request URL:', req.url)
-    console.log('🌐 Request headers:', Object.fromEntries(req.headers.entries()))
+    console.log('=== CREATE SUBSCRIPTION CHECKOUT FUNCTION STARTED ===')
     
-    // Add timeout to all async operations
-    const timeout = (ms: number) => new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Operation timeout')), ms)
-    )
-    
-    const data: CreateCheckoutRequest = await Promise.race([
-      req.json(),
-      timeout(5000)
-    ]) as CreateCheckoutRequest
-    
-    console.log('Request data received successfully')
-    console.log('Student ID:', data.student_id)
-    console.log('Class name:', data.class_name)
-    
-    // Modo de teste simples - apenas validar credenciais
-    if (data.class_name === 'TEST_MODE') {
-      console.log('🧪 Test mode activated - comprehensive validation')
+    const { student_id, class_id, create_enrollment = true }: CreateSubscriptionCheckoutRequest = await req.json()
+    console.log('Request data:', { student_id, class_id, create_enrollment })
+
+    // Validações básicas de entrada
+    if (!student_id || !class_id) {
+      const missingFields = [];
+      if (!student_id) missingFields.push('student_id');
+      if (!class_id) missingFields.push('class_id');
       
-      try {
-        const asaasApiKey = Deno.env.get('ASAAS_API_KEY')
-        const asaasWalletId = Deno.env.get('ASAAS_WALLET_ID')
-        const asaasEnvironment = Deno.env.get('ASAAS_ENVIRONMENT') || 'sandbox'
-        
-        console.log('🔍 Environment check:', {
-          hasApiKey: !!asaasApiKey,
-          hasWalletId: !!asaasWalletId,
-          environment: asaasEnvironment,
-          apiKeyLength: asaasApiKey?.length || 0,
-          apiKeyPrefix: asaasApiKey?.substring(0, 10) || 'NOT_SET'
-        })
-        
-        if (!asaasApiKey || !asaasWalletId) {
-          throw new Error(`Missing credentials: API_KEY=${!!asaasApiKey}, WALLET_ID=${!!asaasWalletId}`)
-        }
-        
-        const asaasBaseUrl = asaasEnvironment === 'sandbox' 
-          ? 'https://sandbox.asaas.com/api/v3'
-          : 'https://api.asaas.com/api/v3'
-        
-        console.log('🌐 Testing API connection to:', asaasBaseUrl)
-        
-        // Teste de conectividade com a API do Asaas
-        const testResponse = await fetch(`${asaasBaseUrl}/customers?limit=1`, {
-          headers: {
-            'access_token': asaasApiKey,
-            'Authorization': `Bearer ${asaasApiKey}`,
-            'Content-Type': 'application/json',
-          }
-        })
-        
-        console.log('📡 API Response status:', testResponse.status, testResponse.statusText)
-        
-        let testResult = ''
-        try {
-          testResult = await testResponse.text()
-        } catch (e) {
-          testResult = `Error reading response: ${e.message}`
-        }
-        
-        let parsedResult
-        try {
-          parsedResult = JSON.parse(testResult)
-        } catch (e) {
-          parsedResult = { rawText: testResult.substring(0, 300) }
-        }
-        
-        console.log('✅ Test completed successfully')
-        
-        return new Response(JSON.stringify({
-          test: 'comprehensive',
-          timestamp: new Date().toISOString(),
-          environment: {
-            baseUrl: asaasBaseUrl,
-            environment: asaasEnvironment
-          },
-          credentials: {
-            hasApiKey: !!asaasApiKey,
-            hasWalletId: !!asaasWalletId,
-            apiKeyPrefix: asaasApiKey?.substring(0, 10) || 'NOT_SET'
-          },
-          apiTest: {
-            status: testResponse.status,
-            statusText: testResponse.statusText,
-            ok: testResponse.ok,
-            result: parsedResult
-          }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        })
-        
-      } catch (error) {
-        console.error('❌ Test mode failed:', error)
-        
-        return new Response(JSON.stringify({
-          test: 'failed',
-          error: error.message,
-          stack: error.stack,
-          timestamp: new Date().toISOString()
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        })
-      }
+      throw new Error(`Parâmetros obrigatórios ausentes: ${missingFields.join(', ')}`)
     }
-    
-    // Configurações
-    const asaasApiKey = Deno.env.get('ASAAS_API_KEY')
-    const asaasWalletId = Deno.env.get('ASAAS_WALLET_ID')
-    const asaasEnvironment = Deno.env.get('ASAAS_ENVIRONMENT') || 'sandbox'
-    const frontendUrl = Deno.env.get('FRONTEND_URL') || 'http://localhost:8080'
-    
-    console.log('Environment check:', {
-      hasApiKey: !!asaasApiKey,
-      hasWalletId: !!asaasWalletId,
-      environment: asaasEnvironment,
-      frontendUrl: frontendUrl,
-      apiKeyLength: asaasApiKey?.length || 0,
-      walletIdValue: asaasWalletId || 'NOT_SET'
-    })
-    
-    if (!asaasApiKey || !asaasWalletId) {
-      console.error('Missing Asaas credentials')
-      throw new Error('Asaas credentials not configured. Please set ASAAS_API_KEY and ASAAS_WALLET_ID in Supabase secrets.')
+
+    // Validar formato UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(student_id)) {
+      throw new Error('student_id deve ser um UUID válido')
     }
-    
-    const asaasBaseUrl = asaasEnvironment === 'sandbox' 
-      ? 'https://sandbox.asaas.com/api/v3'
-      : 'https://api.asaas.com/api/v3'
-    
-    console.log('Creating checkout for enrollment:', data.enrollment_id)
-    console.log('Using Asaas URL:', asaasBaseUrl)
+    if (!uuidRegex.test(class_id)) {
+      throw new Error('class_id deve ser um UUID válido')
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 1. Check if student already has asaas_customer_id (with timeout)
-    console.log('Checking for existing Asaas customer for student:', data.student_id)
-    const { data: studentData, error: studentError } = await Promise.race([
-      supabase
-        .from('students')
-        .select('asaas_customer_id')
-        .eq('id', data.student_id)
-        .single(),
-      timeout(10000)
-    ]) as any
+    console.log('✅ Validações de entrada concluídas')
 
-    if (studentError) {
-      console.error('Error fetching student data:', studentError)
-      throw new Error(`Failed to fetch student data: ${studentError.message}`)
+    // Verificar se o estudante existe
+    console.log('🔍 Verificando se estudante existe...')
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select(`
+        id,
+        profiles!students_id_fkey(
+          nome_completo,
+          email
+        )
+      `)
+      .eq('id', student_id)
+      .single()
+
+    if (studentError || !studentData) {
+      console.error('❌ Estudante não encontrado:', studentError)
+      throw new Error('Estudante não encontrado')
     }
-    
-    console.log('Student data retrieved successfully')
 
-    let asaasCustomerId = studentData?.asaas_customer_id
+    console.log('✅ Estudante encontrado:', studentData.profiles?.nome_completo)
 
-    if (asaasCustomerId) {
-      console.log('Using existing Asaas customer:', asaasCustomerId)
-    } else {
-      console.log('No existing Asaas customer found, creating new one...')
+    // Verificar se a turma existe
+    console.log('🔍 Verificando se turma existe...')
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select(`
+        id,
+        nome,
+        modalidade,
+        nivel,
+        valor_aula,
+        valor_matricula,
+        ativa
+      `)
+      .eq('id', class_id)
+      .single()
+
+    if (classError || !classData) {
+      console.error('❌ Turma não encontrada:', classError)
+      throw new Error('Turma não encontrada')
+    }
+
+    if (!classData.ativa) {
+      throw new Error('Turma não está ativa')
+    }
+
+    console.log('✅ Turma encontrada:', classData.nome || classData.modalidade)
+
+    // Verificar se estudante já tem enrollment (qualquer status)
+    console.log('🔍 Verificando enrollment existente (qualquer status)...')
+    const { data: existingEnrollment, error: enrollmentError } = await supabase
+      .from('enrollments')
+      .select('id, ativa, data_matricula, status, checkout_token, checkout_url')
+      .eq('student_id', student_id)
+      .eq('class_id', class_id)
+      .order('created_at', { ascending: false })
+      .maybeSingle()
+
+    if (enrollmentError) {
+      console.error('❌ Erro ao verificar matrícula:', enrollmentError)
+      throw new Error('Erro ao verificar matrícula existente')
+    }
+
+    const isAlreadyEnrolled = existingEnrollment?.ativa === true
+    const hasPendingEnrollment = existingEnrollment?.status === 'pending'
+    const enrollmentStatus = existingEnrollment?.status || null
+
+    console.log(`📋 Status encontrado: ${enrollmentStatus || 'NENHUM'} | Ativa: ${existingEnrollment?.ativa || false}`)
+
+    console.log('✅ Verificações do banco de dados concluídas')
+
+    let enrollmentId: string | null = null
+    let checkoutToken: string | null = null
+    let checkoutUrl: string | null = null
+    let responseMessage = ''
+
+    // Lógica baseada no status existente e parâmetro create_enrollment
+    if (isAlreadyEnrolled) {
+      // Estudante já está matriculado (ativo)
+      responseMessage = 'Estudante já está matriculado nesta turma'
+      enrollmentId = existingEnrollment.id
+      checkoutToken = existingEnrollment.checkout_token
+      checkoutUrl = existingEnrollment.checkout_url
+    } else if (hasPendingEnrollment && existingEnrollment) {
+      // Já existe enrollment pendente - retornar dados existentes
+      console.log('📋 Enrollment pendente existente encontrado')
+      responseMessage = 'Enrollment pendente existente - checkout disponível'
+      enrollmentId = existingEnrollment.id
+      checkoutToken = existingEnrollment.checkout_token
+      checkoutUrl = existingEnrollment.checkout_url || null
+    } else if (create_enrollment) {
+      // Criar novo enrollment pendente
+      console.log('📝 Criando novo enrollment pendente...')
       
-      // Primeiro tenta buscar por CPF (para clientes criados antes da otimização)
-      console.log('Searching for existing customer with CPF:', data.customer.cpfCnpj.replace(/\D/g, ''))
-      const searchResponse = await Promise.race([
-        fetch(
-          `${asaasBaseUrl}/customers?cpfCnpj=${data.customer.cpfCnpj.replace(/\D/g, '')}`,
-          {
-            headers: {
-              'access_token': asaasApiKey,
-              'Authorization': `Bearer ${asaasApiKey}`,
-              'Content-Type': 'application/json',
-            }
-          }
-        ),
-        timeout(15000)
-      ]) as Response
+      const newToken = crypto.randomUUID()
+      const mockCheckoutUrl = `https://sandbox.asaas.com/checkout/${newToken}?student=${encodeURIComponent(studentData.profiles?.nome_completo || '')}&class=${encodeURIComponent(classData.nome || classData.modalidade)}&value=${classData.valor_aula}`
       
-      console.log('Customer search response:', {
-        status: searchResponse.status,
-        statusText: searchResponse.statusText,
-        ok: searchResponse.ok
-      })
-
-      let asaasCustomer
-      if (searchResponse.ok) {
-        const searchResult = await searchResponse.json()
-        if (searchResult.data && searchResult.data.length > 0) {
-          asaasCustomer = searchResult.data[0]
-          console.log('Customer found:', asaasCustomer.id)
-        }
-      }
-
-      // Se não encontrou, cria novo cliente
-      if (!asaasCustomer) {
-      console.log('Creating new customer:', {
-        name: data.customer.name,
-        email: data.customer.email,
-        cpfCnpj: data.customer.cpfCnpj.replace(/\D/g, ''),
-        phone: data.customer.phone.replace(/\D/g, '')
-      })
-      
-      const customerResponse = await Promise.race([
-        fetch(`${asaasBaseUrl}/customers`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'access_token': asaasApiKey,
-            'Authorization': `Bearer ${asaasApiKey}`,
-          },
-          body: JSON.stringify({
-            name: data.customer.name,
-            email: data.customer.email,
-            cpfCnpj: data.customer.cpfCnpj.replace(/\D/g, ''),
-            phone: data.customer.phone.replace(/\D/g, ''),
-            mobilePhone: data.customer.phone.replace(/\D/g, ''),
-            notificationDisabled: false,
-          })
-        }),
-        timeout(15000)
-      ]) as Response
-      
-      console.log('Customer creation response:', {
-        status: customerResponse.status,
-        statusText: customerResponse.statusText,
-        ok: customerResponse.ok
-      })
-
-      if (!customerResponse.ok) {
-        let errorData
-        let errorText
-        
-        try {
-          errorText = await customerResponse.text()
-          errorData = JSON.parse(errorText)
-        } catch (e) {
-          errorData = { message: errorText || 'Unknown error' }
-        }
-        
-        console.error('Customer creation failed:', {
-          status: customerResponse.status,
-          statusText: customerResponse.statusText,
-          body: errorData
+      const { data: newEnrollment, error: createError } = await supabase
+        .from('enrollments')
+        .insert({
+          student_id,
+          class_id,
+          data_matricula: new Date().toISOString().split('T')[0],
+          ativa: false, // Não ativo até confirmar pagamento
+          status: 'pending',
+          valor_pago_matricula: 0,
+          checkout_token: newToken,
+          checkout_url: mockCheckoutUrl,
+          checkout_created_at: new Date().toISOString()
         })
-        
-        let specificError = 'Failed to create customer'
-        if (errorData?.errors) {
-          specificError = Object.values(errorData.errors).flat().join(', ')
-        } else if (errorData?.message) {
-          specificError = errorData.message
-        }
-        
-        throw new Error(`Asaas Customer Error (${customerResponse.status}): ${specificError}`)
+        .select('id, checkout_token, checkout_url')
+        .single()
+
+      if (createError) {
+        console.error('❌ Erro ao criar enrollment:', createError)
+        throw new Error('Falha ao criar enrollment pendente')
       }
 
-        asaasCustomer = await customerResponse.json()
-        console.log('Customer created:', asaasCustomer.id)
-      }
-
-      asaasCustomerId = asaasCustomer.id
-
-      // Save the asaas_customer_id to students table for future use
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ asaas_customer_id: asaasCustomerId })
-        .eq('id', data.student_id)
-
-      if (updateError) {
-        console.error('Warning: Failed to save asaas_customer_id to student record:', updateError)
-        // Don't fail the checkout, just log the warning
-      } else {
-        console.log('Saved asaas_customer_id to student record for future use')
-      }
-    }
-
-    // 2. Calcular datas da assinatura
-    const today = new Date()
-    const dueDay = data.due_day || 10
-    let startDate = new Date(today.getFullYear(), today.getMonth(), dueDay)
-    
-    // Se a data já passou este mês, usar próximo mês
-    if (startDate <= today) {
-      startDate = new Date(today.getFullYear(), today.getMonth() + 1, dueDay)
-    }
-
-    // Data final da assinatura (1 ano no futuro)
-    const endDate = new Date(startDate.getFullYear() + 1, startDate.getMonth(), dueDay)
-
-    // 3. Criar checkout com assinatura recorrente
-    const checkoutPayload: any = {
-      billingTypes: [data.billing_type],
-      chargeTypes: ["RECURRENT"],
-      customerData: {
-        name: data.customer.name,
-        email: data.customer.email,
-        cpfCnpj: data.customer.cpfCnpj.replace(/\D/g, ''),
-        phone: data.customer.phone.replace(/\D/g, ''),
-        mobilePhone: data.customer.phone.replace(/\D/g, ''),
-      },
-      items: [
-        {
-          name: `Mensalidade - ${data.class_name}`,
-          description: `Assinatura mensal da turma ${data.class_name}`,
-          value: data.value,
-          quantity: 1
-        }
-      ],
-      subscription: {
-        cycle: "MONTHLY",
-        nextDueDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        value: data.value,
-        description: `Mensalidade - ${data.class_name}`,
-        externalReference: data.enrollment_id,
-        fine: {
-          value: 2.00,
-          type: "PERCENTAGE"
-        },
-        interest: {
-          value: 1.00,
-          type: "PERCENTAGE"
-        },
-        discount: {
-          value: 5.00,
-          dueDateLimitDays: 5,
-          type: "PERCENTAGE"
-        }
-      },
-      externalReference: data.enrollment_id,
-      walletId: asaasWalletId
-    }
-    
-    // Adicionar callbacks apenas se não for localhost/desenvolvimento
-    const isLocalhost = frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1') || frontendUrl.includes('0.0.0.0')
-    if (!isLocalhost) {
-      console.log('Adding callback URLs for production environment')
-      checkoutPayload.callback = {
-        successUrl: `${frontendUrl}/checkout/success?enrollment_id=${data.enrollment_id}`,
-        cancelUrl: `${frontendUrl}/checkout/cancel`,
-        expiredUrl: `${frontendUrl}/checkout/expired`,
-        autoRedirect: true
-      }
+      enrollmentId = newEnrollment.id
+      checkoutToken = newEnrollment.checkout_token
+      checkoutUrl = newEnrollment.checkout_url
+      responseMessage = 'Enrollment pendente criado - checkout disponível'
+      
+      console.log('✅ Enrollment pendente criado:', {
+        id: enrollmentId,
+        token: checkoutToken,
+        url: checkoutUrl
+      })
     } else {
-      console.log('Skipping callback URLs for localhost/development environment')
+      // Apenas validação - não criar enrollment
+      responseMessage = 'Dados validados - disponível para matrícula'
     }
 
-    console.log('Creating checkout with payload:', JSON.stringify(checkoutPayload, null, 2))
+    // Preparar resposta com dados reais
+    const enrollmentData = {
+      student_id,
+      class_id,
+      class_name: classData.nome || `${classData.modalidade} - ${classData.nivel}`,
+      monthly_value: Number(classData.valor_aula),
+      enrollment_fee: Number(classData.valor_matricula || 0),
+      student_name: studentData.profiles?.nome_completo || 'Nome não encontrado',
+      already_enrolled: isAlreadyEnrolled,
+      enrollment_status: enrollmentStatus
+    }
 
-    console.log('Making checkout request to:', `${asaasBaseUrl}/checkouts`)
-    const checkoutResponse = await Promise.race([
-      fetch(`${asaasBaseUrl}/checkouts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'access_token': asaasApiKey,
-          'Authorization': `Bearer ${asaasApiKey}`,
-        },
-        body: JSON.stringify(checkoutPayload)
-      }),
-      timeout(20000)
-    ]) as Response
+    const response: CheckoutResponse = {
+      success: true,
+      checkout_url: checkoutUrl,
+      enrollment_id: enrollmentId,
+      checkout_token: checkoutToken,
+      enrollment_data: enrollmentData,
+      message: responseMessage
+    }
+
+    console.log('=== CHECKOUT MOCK CREATED SUCCESSFULLY ===')
+    console.log('Response data:', response)
     
-    console.log('Checkout creation response:', {
-      status: checkoutResponse.status,
-      statusText: checkoutResponse.statusText,
-      ok: checkoutResponse.ok
-    })
-
-    if (!checkoutResponse.ok) {
-      let errorData
-      let errorText
-      
-      try {
-        errorText = await checkoutResponse.text()
-        errorData = JSON.parse(errorText)
-      } catch (e) {
-        errorData = { message: errorText || 'Unknown error' }
-      }
-      
-      console.error('Checkout creation failed:', {
-        status: checkoutResponse.status,
-        statusText: checkoutResponse.statusText,
-        headers: Object.fromEntries(checkoutResponse.headers.entries()),
-        body: errorData,
-        rawText: errorText
-      })
-      
-      // Analisar erro específico do Asaas com logging melhorado
-      let specificError = 'Failed to create checkout'
-      let detailedError = errorData
-      
-      console.log('🔍 Debugging error data structure:', {
-        errorDataType: typeof errorData,
-        errorDataKeys: errorData ? Object.keys(errorData) : 'null',
-        errorDataStringified: JSON.stringify(errorData, null, 2)
-      })
-      
-      if (errorData?.errors) {
-        if (typeof errorData.errors === 'object') {
-          // Handle both array and object error formats
-          if (Array.isArray(errorData.errors)) {
-            specificError = errorData.errors.map(e => e.description || e.message || JSON.stringify(e)).join(', ')
-          } else {
-            specificError = Object.values(errorData.errors).flat().join(', ')
-          }
-        } else {
-          specificError = String(errorData.errors)
-        }
-        detailedError = errorData.errors
-      } else if (errorData?.message) {
-        specificError = errorData.message
-      } else if (errorData?.error) {
-        specificError = errorData.error
-      } else if (typeof errorData === 'string') {
-        specificError = errorData
-      } else if (errorData) {
-        specificError = JSON.stringify(errorData)
-      }
-      
-      console.error('🚨 Final error details:', {
-        specificError,
-        detailedError: JSON.stringify(detailedError, null, 2),
-        rawErrorText: errorText?.substring(0, 500)
-      })
-      
-      throw new Error(`Asaas Checkout Error (${checkoutResponse.status}): ${specificError}`)
-    }
-
-    const checkout = await checkoutResponse.json()
-    console.log('Checkout created:', checkout.id)
-
-    // 4. Salvar referência do checkout no banco
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
-
-    // Criar um registro temporário para rastrear o checkout
-    const { error: dbError } = await supabase
-      .from('enrollment_checkouts')
-      .insert({
-        enrollment_id: data.enrollment_id,
-        student_id: data.student_id,
-        asaas_checkout_id: checkout.id,
-        asaas_customer_id: asaasCustomerId,
-        status: 'pending',
-        checkout_url: checkout.url,
-        value: data.value,
-        created_at: new Date().toISOString()
-      })
-
-    // Se a tabela não existir, apenas loggar o aviso
-    if (dbError) {
-      console.warn('Could not save checkout reference (table may not exist):', dbError)
-    }
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        checkout: {
-          id: checkout.id,
-          url: checkout.url,
-          status: checkout.status
-        },
-        customer: {
-          id: asaasCustomerId,
-          name: data.customer.name,
-        },
-        subscription: {
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          value: data.value
-        }
-      }),
+      JSON.stringify(response),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -524,40 +234,21 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in create-subscription-checkout:', error)
-    console.error('Error stack:', error.stack)
+    console.error('=== ERROR IN CREATE SUBSCRIPTION CHECKOUT ===')
+    console.error('Error:', error)
+    console.error('Stack:', error.stack)
     
-    // Determinar mensagem específica baseada no erro
-    let userMessage = 'Erro ao criar checkout de assinatura'
-    let statusCode = 500
-    
-    if (error.message.includes('Asaas credentials not configured')) {
-      userMessage = 'Configuração pendente: Os secrets do Asaas (ASAAS_API_KEY e ASAAS_WALLET_ID) precisam ser configurados no painel do Supabase.'
-      statusCode = 503 // Service Unavailable
-    } else if (error.message.includes('Invalid Asaas API key')) {
-      userMessage = 'API key do Asaas inválida. Verifique se foi configurada corretamente no painel do Supabase.'
-      statusCode = 401
-    } else if (error.message.includes('Failed to connect to Asaas API')) {
-      userMessage = 'Não foi possível conectar com o Asaas. Verifique as configurações.'
-      statusCode = 502
-    } else if (error.message.includes('Asaas Customer Error')) {
-      userMessage = 'Erro ao criar cliente no Asaas. Verifique os dados informados (CPF, email, telefone).'
-      statusCode = 400
-    } else if (error.message.includes('Asaas Checkout Error')) {
-      userMessage = 'Erro ao criar checkout no Asaas. ' + (error.message.split(': ')[1] || 'Tente novamente.')
-      statusCode = 502
+    const errorResponse: CheckoutResponse = {
+      success: false,
+      message: 'Erro na criação do checkout',
+      error: error.message || 'Internal server error'
     }
     
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        userMessage: userMessage,
-        details: error.stack || 'No stack trace available',
-        timestamp: new Date().toISOString()
-      }),
+      JSON.stringify(errorResponse),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: statusCode,
+        status: 500,
       }
     )
   }

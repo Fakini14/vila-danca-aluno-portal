@@ -4,9 +4,12 @@
  * Responsável por:
  * - Validar dados obrigatórios do estudante
  * - Verificar se estudante já possui asaas_customer_id
- * - Criar cliente no Asaas quando necessário
+ * - Criar cliente no Asaas quando necessário para futuro uso
  * - Cache inteligente para evitar chamadas desnecessárias
  * - Tratamento robusto de erros e edge cases
+ * 
+ * Nota: Funcionalidade de pagamentos online foi removida.
+ * Mantém apenas criação de cliente para futura implementação.
  */
 
 import { useState, useCallback, useRef } from 'react';

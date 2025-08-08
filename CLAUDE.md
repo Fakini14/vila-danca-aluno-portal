@@ -19,15 +19,16 @@ The project is in active development with the following modules already implemen
 - **Complete Enrollment System** (3-step workflow: selection, confirmation, payment)
 - **Secure Authentication Flow** (Students register themselves, admin only edits data)
 - **Student Self-Enrollment System** (Complete RLS policies for student-initiated enrollments)
-- **E-commerce Checkout System** (Full Asaas integration with PIX, Boleto, Credit Card)
-- **Payment Webhook Automation** (Automatic enrollment activation after payment confirmation)
+- **Basic Enrollment System** (Simple enrollment without online payment flow)
+- **Asaas Customer Integration** (Automatic customer creation for future use)
 - **Email Confirmation System** (Auth confirmation with redirect handling)
 
 ### Key Business Logic
 - **Multi-role system**: Admin, Teacher (Professor), Student (Aluno)
 - **Multiple enrollments**: Students can enroll in multiple classes simultaneously
 - **Separate billing**: Each class enrollment generates independent monthly charges
-- **Payment processing**: Integration with ASAAS payment gateway (PIX, Boleto, Credit Card)
+- **Payment processing**: Manual payment management (cash/direct payment)
+- **Customer management**: Automatic Asaas customer creation for future integrations
 - **Attendance tracking**: Teachers mark presence for commission calculations
 - **Event management**: Separate module for school events and ticket sales
 
@@ -66,7 +67,7 @@ This is a React-based dance school student portal built with modern web technolo
 - **State Management**: TanStack Query for server state
 - **Routing**: React Router DOM v6
 - **Forms**: React Hook Form with Zod validation
-- **Payment Gateway**: Asaas (PIX, Boleto, Credit Card)
+- **Customer Management**: Asaas customer creation (for future integrations)
 - **Icons**: Lucide React
 - **Date Handling**: date-fns
 - **Notifications**: Sonner toast library
@@ -79,7 +80,7 @@ The Supabase database includes these main entities:
 - `class_types` - Dance modalities (Ballet, Jazz, etc.) with colors
 - `classes` - Dance classes with schedules, pricing, and teacher assignments
 - `enrollments` - Student enrollments in classes with status tracking
-- `payments` - Payment tracking with ASAAS integration
+- `payments` - Manual payment tracking
 - `attendance` - Class attendance records for commission calculations
 - `notes` - Administrative notes about students
 - `announcements` - System announcements
@@ -141,19 +142,16 @@ The Supabase database includes these main entities:
 - Dark/light theme support via `next-themes`
 - Form validation with Zod schemas
 
-#### Payment Integration (**IMPLEMENTED**)
-- **Complete E-commerce Checkout**: Professional checkout flow with Asaas integration
-- **Multiple Payment Methods**: PIX, Boleto, Credit Card support
-- **Webhook Automation**: Automatic enrollment activation after payment confirmation
+#### Payment Integration (**SIMPLIFIED**)
+- **Basic Enrollment System**: Simple enrollment without online payment flow
+- **Asaas Customer Creation**: Automatic customer creation for future use
+- **Manual Payment Management**: Cash/direct payment processing through admin interface
 - **Edge Functions**: 
-  - `create-enrollment-payment`: Handles payment creation and customer management
-  - `asaas-webhook`: Processes payment confirmations and activates enrollments
-  - `send-enrollment-confirmation`: Sends beautiful confirmation emails
-- **Checkout Pages**: 
-  - `/checkout/:paymentId`: Main checkout interface
-  - `/checkout/success`: Payment confirmation page
-  - `/checkout/failure`: Payment failure handling with retry options
-- **Security**: Full encryption and secure payment processing through Asaas gateway
+  - `create-asaas-customer`: Creates customer in Asaas system for future use
+- **Enrollment Flow**: 
+  - Students can enroll directly (active immediately)
+  - Payment handled manually by admin
+  - No online checkout required
 
 ## <� DEVELOPMENT GUIDELINES
 
