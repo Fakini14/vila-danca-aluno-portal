@@ -41,7 +41,7 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
     }, [value, mask]);
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let inputValue = e.target.value;
+      const inputValue = e.target.value;
       
       // Remove all non-digits
       const cleanValue = removeNonDigits(inputValue);

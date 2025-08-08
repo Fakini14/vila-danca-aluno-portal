@@ -202,7 +202,7 @@ export function CreateEnrollmentModal({ open, onOpenChange, onSuccess }: CreateE
         title: 'Cliente validado',
         description: 'Dados do aluno validados com sucesso. Agora você pode criar a matrícula.',
       });
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error('Erro na validação:', error);
       toast({
         title: 'Erro na validação',
@@ -253,7 +253,7 @@ export function CreateEnrollmentModal({ open, onOpenChange, onSuccess }: CreateE
       form.reset();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: Error) {
       toast({
         title: 'Erro ao criar matrícula',
         description: error.message,

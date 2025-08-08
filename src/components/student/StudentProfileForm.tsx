@@ -97,7 +97,7 @@ export function StudentProfileForm() {
         title: "Perfil atualizado",
         description: "Suas informações básicas foram atualizadas com sucesso",
       });
-    } catch (error: any) {
+    } catch (error: Error) {
       toast({
         title: "Erro ao atualizar perfil",
         description: error.message,
@@ -133,7 +133,7 @@ export function StudentProfileForm() {
         title: "Informações pessoais atualizadas",
         description: "Seus dados pessoais foram atualizados com sucesso",
       });
-    } catch (error: any) {
+    } catch (error: Error) {
       toast({
         title: "Erro ao atualizar informações",
         description: error.message,

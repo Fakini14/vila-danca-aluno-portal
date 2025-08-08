@@ -121,7 +121,7 @@ export function CreateClassModal({ open, onOpenChange, onSuccess }: CreateClassM
       form.reset();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: Error) {
       toast({
         title: 'Erro ao criar turma',
         description: error.message,

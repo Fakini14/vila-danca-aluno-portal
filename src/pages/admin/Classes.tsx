@@ -142,7 +142,7 @@ export default function Classes() {
       
       // Invalidate cache to refresh the list
       queryClient.invalidateQueries({ queryKey: ['classes', 'optimized'] });
-    } catch (error: any) {
+    } catch (error: Error) {
       toast({
         title: "Erro ao excluir turma",
         description: error.message,

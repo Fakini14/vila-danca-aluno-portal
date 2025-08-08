@@ -37,7 +37,7 @@ export interface Column<T> {
   key: keyof T | string;
   title: string;
   width?: string;
-  render?: (value: any, item: T) => ReactNode;
+  render?: (value: unknown, item: T) => ReactNode;
   searchable?: boolean;
   sortable?: boolean;
 }
@@ -106,7 +106,7 @@ export function DataTable<T extends Record<string, any>>({
     : filteredData;
 
   // Helper function to get nested values
-  function getNestedValue(obj: any, path: string) {
+  function getNestedValue(obj: Record<string, unknown>, path: string) {
     return path.split('.').reduce((curr, prop) => curr?.[prop], obj);
   }
 

@@ -223,88 +223,92 @@ export function StudentAvailableClasses() {
 
     setEnrollingClass(classItem.id);
 
+    const isDev = import.meta.env.DEV;
+    const addDebug = (message: string) => {
+      if (isDev) {
+        console.log('🔍 [CHECKOUT]', message);
+      }
+    };
+
     try {
-      const enrollmentDate = new Date().toISOString().split('T')[0];
+      addDebug(`Iniciando processo de checkout...`);
+      addDebug(`Student ID: ${profile.id}`);
+      addDebug(`Class ID: ${classItem.id}`);
 
-      // Check if enrollment already exists (active)
-      const { data: existingEnrollment, error: checkError } = await supabase
-        .from('enrollments')
-        .select('id, ativa, created_at')
-        .eq('student_id', profile.id)
-        .eq('class_id', classItem.id)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-
-      if (existingEnrollment && existingEnrollment.ativa) {
-        toast({
-          title: 'Já matriculado',
-          description: 'Você já está matriculado nesta turma.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Create or reactivate enrollment (now active immediately)
-      let enrollment;
-      if (existingEnrollment) {
-        // Reactivate existing enrollment
-        const { data: reactivatedEnrollment, error: reactivateError } = await supabase
-          .from('enrollments')
-          .update({ 
-            ativa: true, // Activated immediately
-            data_matricula: enrollmentDate,
-            valor_pago_matricula: 0
-          })
-          .eq('id', existingEnrollment.id)
-          .select()
-          .single();
-
-        if (reactivateError) throw reactivateError;
-        enrollment = reactivatedEnrollment;
-      } else {
-        // Create new enrollment (active immediately)
-        const { data: newEnrollment, error: enrollmentError } = await supabase
-          .from('enrollments')
-          .insert({
-            student_id: profile.id,
-            class_id: classItem.id,
-            data_matricula: enrollmentDate,
-            valor_pago_matricula: 0,
-            ativa: true, // Activated immediately
-          })
-          .select()
-          .single();
-
-        if (enrollmentError) throw enrollmentError;
-        enrollment = newEnrollment;
-      }
-
-      // Ensure Asaas customer exists for future use
-      console.log('🚀 Criando cliente Asaas se necessário...');
-      try {
-        await ensureAsaasCustomer(profile.id);
-      } catch (customerError) {
-        console.warn('⚠️ Erro ao criar cliente Asaas (não crítico):', customerError);
-        // Continue with enrollment even if customer creation fails
-      }
-
-      toast({
-        title: 'Matrícula realizada!',
-        description: `Você foi matriculado na turma ${classItem.nome || classItem.modalidade} com sucesso.`,
+      // Chamar Edge Function create-subscription-checkout
+      addDebug('Chamando Edge Function create-subscription-checkout...');
+      
+      const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+        body: { 
+          student_id: profile.id, 
+          class_id: classItem.id,
+          create_enrollment: true  // 🚀 PRODUÇÃO: integração completa
+        }
       });
 
-      // Refresh the available classes list
-      fetchAvailableClasses();
+      addDebug(`Resposta Edge Function: ${JSON.stringify(data, null, 2)}`);
+
+      if (error) {
+        console.error('❌ Erro na Edge Function:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Nenhuma resposta da Edge Function');
+      }
+
+      // Verificar se foi bem-sucedida
+      if (!data.success) {
+        const errorMessage = data.error || data.message || 'Erro desconhecido na criação do checkout';
+        throw new Error(errorMessage);
+      }
+
+      // Se há URL de checkout, redirecionar
+      if (data.checkout_url) {
+        addDebug(`Checkout criado com sucesso! URL: ${data.checkout_url}`);
+        
+        toast({
+          title: 'Redirecionando para pagamento',
+          description: `Criando checkout para ${classItem.nome || classItem.modalidade}...`,
+        });
+        
+        // Pequeno delay para mostrar o toast antes do redirect
+        setTimeout(() => {
+          addDebug(`Redirecionando para: ${data.checkout_url}`);
+          window.location.href = data.checkout_url;
+        }, 1500);
+        
+      } else {
+        // Caso especial: enrollment já ativo ou processamento sem checkout
+        const message = data.message || 'Matrícula processada com sucesso';
+        
+        toast({
+          title: 'Matrícula realizada!',
+          description: message,
+        });
+
+        // Refresh the available classes list
+        fetchAvailableClasses();
+      }
 
     } catch (error: unknown) {
-      console.error('❌ Erro ao criar matrícula:', error);
+      console.error('❌ Erro no processo de checkout:', error);
       
-      let errorMessage = 'Não foi possível realizar a matrícula. Tente novamente.';
+      let errorMessage = 'Não foi possível iniciar o processo de matrícula. Tente novamente.';
       
-      const errorObj = error as { code?: string; message?: string; status?: number };
-      if (errorObj?.code === '23505' || errorObj?.message?.includes('duplicate key')) {
-        errorMessage = 'Você já possui uma matrícula para esta turma.';
+      const errorObj = error as { code?: string; message?: string; status?: number; details?: string };
+      
+      // Tratar erros específicos da Edge Function
+      if (errorObj?.message?.includes('Estudante já matriculado')) {
+        errorMessage = 'Você já está matriculado nesta turma.';
+      } else if (errorObj?.message?.includes('Turma inativa') || errorObj?.message?.includes('Turma não encontrada')) {
+        errorMessage = 'Esta turma não está mais disponível para matrícula.';
+      } else if (errorObj?.message?.includes('Estudante não encontrado')) {
+        errorMessage = 'Erro nos dados do seu perfil. Entre em contato com o suporte.';
+      } else if (errorObj?.message?.includes('dados incompletos') || errorObj?.message?.includes('dados obrigatórios')) {
+        errorMessage = 'Complete os dados do seu perfil antes de se matricular.';
+      } else if (errorObj?.message?.includes('Asaas') || errorObj?.message?.includes('pagamento')) {
+        errorMessage = 'Erro no sistema de pagamento. Tente novamente em alguns minutos.';
       } else if (errorObj?.message?.includes('No authorization header') || errorObj?.message?.includes('No API key')) {
         errorMessage = 'Sessão expirada. Faça login novamente.';
       } else if (errorObj?.status === 401) {
@@ -314,7 +318,7 @@ export function StudentAvailableClasses() {
       }
       
       toast({
-        title: 'Erro na matrícula',
+        title: 'Erro no checkout',
         description: errorMessage,
         variant: 'destructive'
       });

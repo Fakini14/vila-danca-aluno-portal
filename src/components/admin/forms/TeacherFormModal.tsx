@@ -153,7 +153,7 @@ export function TeacherFormModal({ open, onClose, teacher, onSuccess }: TeacherF
       }
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: Error) {
       toast({
         title: "Erro ao salvar professor",
         description: error.message,

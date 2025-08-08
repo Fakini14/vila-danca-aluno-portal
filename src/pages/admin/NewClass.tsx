@@ -179,7 +179,7 @@ export default function NewClass() {
       });
       navigate('/admin/classes');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao criar turma',
         description: error.message,
